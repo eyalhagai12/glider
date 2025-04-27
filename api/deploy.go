@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"glider/deployments"
 	"glider/gitrepo"
 	"glider/images"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 )
 
 type DeployRequest struct {
@@ -26,28 +28,42 @@ type DeployRequest struct {
 type DeployResponse struct {
 	DeploymentName string `json:"deploymentName"`
 	Status         string `json:"status"`
+	Replicas       int    `json:"replicas"`
+	GithubRepo     string `json:"githubRepo"`
+	GithubBranch   string `json:"githubBranch"`
 }
 
-type DeployHandlers struct{}
-
-func NewDeployHandlers() DeployHandlers {
-	return DeployHandlers{}
+type DeployHandlers struct {
+	db *sqlx.DB
 }
 
-func (d DeployHandlers) Deploy(c *gin.Context, request DeployRequest) (DeployResponse, error) {
+func NewDeployHandlers(db *sqlx.DB) DeployHandlers {
+	return DeployHandlers{
+		db: db,
+	}
+}
+
+func (d DeployHandlers) Deploy(c *gin.Context, request DeployRequest) (*deployments.Deployment, error) {
 	path := "./tmp/clones/" + request.DeploymentName
+
+	deployment := deployments.NewDeployment(request.DeploymentName, request.GithubRepo, request.GithubBranch, request.Replicas)
+	err := deployments.StoreDeployment(d.db, deployment)
+	if err != nil {
+		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to store deployment: %v", err))
+	}
+
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return DeployResponse{}, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create docker client: %v", err))
+		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create docker client: %v", err))
 	}
 	defer cli.Close()
 
-	d.uploadImage(c, cli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
+	err = d.uploadImage(c, cli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
+	if err != nil {
+		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to upload image: %v", err))
+	}
 
-	return DeployResponse{
-		DeploymentName: request.DeploymentName,
-		Status:         "deploying",
-	}, nil
+	return deployment, nil
 }
 
 func (d DeployHandlers) uploadImage(ctx context.Context, cli *client.Client, path string, repo string, branch string, deploymentName string, dockerFilePath string, tag string, namespace string) error {
