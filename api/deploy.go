@@ -1,11 +1,14 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"glider/gitrepo"
 	"glider/images"
 	"net/http"
+	"os"
 
+	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,23 +36,39 @@ func NewDeployHandlers() DeployHandlers {
 
 func (d DeployHandlers) Deploy(c *gin.Context, request DeployRequest) (DeployResponse, error) {
 	path := "./tmp/clones/" + request.DeploymentName
-	_, err := gitrepo.CloneRepository(path, request.GithubRepo, request.GithubBranch)
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return DeployResponse{}, c.AbortWithError(http.StatusInternalServerError, err)
+		return DeployResponse{}, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to create docker client: %v", err))
 	}
+	defer cli.Close()
 
-	image, err := images.BuildImage(request.DeploymentName, path, request.DockerfilePath, request.Tag)
-	if err != nil {
-		return DeployResponse{}, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to build image: %v", err))
-	}
-	defer image.Body.Close()
-
-	if err := images.StoreImage(c, request.DeploymentName, request.Namespace, request.Tag); err != nil {
-		return DeployResponse{}, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to store image: %v", err))
-	}
+	d.uploadImage(c, cli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
 
 	return DeployResponse{
 		DeploymentName: request.DeploymentName,
 		Status:         "deploying",
 	}, nil
+}
+
+func (d DeployHandlers) uploadImage(ctx context.Context, cli *client.Client, path string, repo string, branch string, deploymentName string, dockerFilePath string, tag string, namespace string) error {
+	_, err := gitrepo.CloneRepository(path, repo, branch)
+	if err != nil {
+		return err
+	}
+
+	image, err := images.BuildImage(ctx, cli, deploymentName, path, dockerFilePath, tag)
+	if err != nil {
+		return err
+	}
+	defer image.Body.Close()
+
+	if err := images.StoreImage(ctx, cli, deploymentName, namespace, tag); err != nil {
+		return err
+	}
+
+	err = os.RemoveAll(path)
+	if err != nil {
+		return err
+	}
+	return nil
 }

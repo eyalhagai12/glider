@@ -26,6 +26,10 @@ services:
     volumes:
       - registry-data:/var/lib/registry
     restart: always
+    environment:
+      - REGISTRY_USERNAME=glider
+      - REGISTRY_PASSWORD=glider123
+
 
 volumes:
   postgres-data:
