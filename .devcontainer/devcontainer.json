@@ -10,20 +10,16 @@
 	"features": {
 		"ghcr.io/devcontainers/features/go:1": {},
 		"ghcr.io/guiyomh/features/golangci-lint:0": {},
-		"ghcr.io/rafaph/devcontainer-features/goose-cli:1": {}
+		"ghcr.io/rafaph/devcontainer-features/goose-cli:1": {},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+		"ghcr.io/devcontainers-extra/features/kind:1": {}
 	},
-	"remoteEnv": {
-    	"DOCKER_BUILDKIT": "1"
-	}
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
+	
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
+	"postCreateCommand": "go install github.com/air-verse/air@latest"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
