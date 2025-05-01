@@ -2,21 +2,24 @@ package images
 
 import (
 	"context"
+	"io"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 )
 
-func BuildImage(ctx context.Context, cli *client.Client, name string, dirPath string, relativeDockerPath string, tag string) (types.ImageBuildResponse, error) {
+func BuildImage(ctx context.Context, cli *client.Client, name string, namespace string, dirPath string, relativeDockerPath string, tag string) (types.ImageBuildResponse, error) {
 	tarArchive, err := archive.TarWithOptions(dirPath, &archive.TarOptions{})
 	if err != nil {
 		return types.ImageBuildResponse{}, err
 	}
 	defer tarArchive.Close()
 
+	imageName := registryURL + "/" + namespace + "/" + name + ":" + tag
 	imageBuildResponse, err := cli.ImageBuild(ctx, tarArchive, types.ImageBuildOptions{
-		Tags:        []string{name + ":" + tag},
+		Tags:        []string{imageName},
 		Dockerfile:  relativeDockerPath,
 		Remove:      true,
 		ForceRemove: true,
@@ -28,6 +31,7 @@ func BuildImage(ctx context.Context, cli *client.Client, name string, dirPath st
 	if err != nil {
 		return types.ImageBuildResponse{}, err
 	}
+	io.Copy(os.Stdout, imageBuildResponse.Body)
 	defer imageBuildResponse.Body.Close()
 
 	return imageBuildResponse, nil
