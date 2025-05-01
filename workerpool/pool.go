@@ -5,8 +5,7 @@ import (
 	"sync"
 )
 
-type TaskFunc[Param any] func(context.Context, Param) error
-type task func(context.Context, any) error
+type Task func(context.Context, int) error
 
 type TaskError struct {
 	WorkerId int
@@ -24,13 +23,8 @@ func NewTaskError(workerId int, err error) TaskError {
 	}
 }
 
-func AsTask[Param any](t TaskFunc[Param]) task {
-	return func(ctx context.Context, param any) error {
-		return t(ctx, param.(Param))
-	}
-}
 
-func worker(ctx context.Context, id int, tasks <-chan task, errors chan<- error, wg *sync.WaitGroup) {
+func worker(ctx context.Context, id int, tasks <-chan Task, errors chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		select {
@@ -47,14 +41,14 @@ func worker(ctx context.Context, id int, tasks <-chan task, errors chan<- error,
 
 type WorkerPool struct {
 	workerCount int
-	tasks       chan task
+	tasks       chan Task
 	errors      chan<- error
 	wg          *sync.WaitGroup
 }
 
 func NewWorkerPool(workerCount int, workerBuffer int) *WorkerPool {
 	cSizes := workerCount * workerBuffer
-	tasks := make(chan task, cSizes)
+	tasks := make(chan Task, cSizes)
 	errors := make(chan error, cSizes)
 
 	return &WorkerPool{
@@ -82,6 +76,6 @@ func (p *WorkerPool) Close() {
 	p.Wait()
 }
 
-func (p *WorkerPool) Submit(t task) {
+func (p *WorkerPool) Submit(t Task) {
 	p.tasks <- t
 }

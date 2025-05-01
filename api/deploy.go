@@ -54,19 +54,13 @@ func NewDeployHandlers(db *sqlx.DB, workerPool *workerpool.WorkerPool, dockerCli
 }
 
 func (d DeployHandlers) Deploy(c *gin.Context, request DeployRequest) (*deployments.Deployment, error) {
-	// path := "./tmp/clones/" + request.DeploymentName
 	deployment := deployments.NewDeployment(request.DeploymentName, request.GithubRepo, request.GithubBranch, request.Replicas)
 	err := deployments.StoreDeployment(d.db, deployment)
 	if err != nil {
 		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to store deployment: %v", err))
 	}
 
-	// err = d.uploadImage(c, d.dockerCli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// d.workerPool.Submit(workerpool.AsTask(d.deploy))
-	go d.deploy(c, DeployParams{Deployment: deployment, Request: request})
+	d.workerPool.Submit(d.deploy(c, deployment, request))
 
 	return deployment, nil
 }
@@ -92,22 +86,23 @@ func (d DeployHandlers) uploadImage(ctx context.Context, cli *client.Client, pat
 	return nil
 }
 
-func (d DeployHandlers) deploy(ctx context.Context, params DeployParams) error {
-	path := "./tmp/clones/" + params.Request.DeploymentName
-	request := params.Request
+func (d DeployHandlers) deploy(ctx context.Context, deployment *deployments.Deployment, request DeployRequest) workerpool.Task {
+	return func(ctx context.Context, id int) error {
+		path := "./tmp/clones/" + request.DeploymentName
 
-	err := d.uploadImage(ctx, d.dockerCli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
-	if err != nil {
-		return err
+		err := d.uploadImage(ctx, d.dockerCli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
+		if err != nil {
+			return err
+		}
+
+		// TODO
+		// get list of available agents
+		// choose agent node to useb based on database based on best fit method (or random at start) and based on cloud vs on-prem preferences later
+		// send request to agent to deploy the new deployment
+		// set deployment status based on the result of the previus step
+		// send an update to websockets if needed to update the UI live
+		// store deployment in database
+
+		return nil
 	}
-
-	// TODO
-	// get list of available agents
-	// choose agent node to useb based on database based on best fit method (or random at start) and based on cloud vs on-prem preferences later
-	// send request to agent to deploy the new deployment
-	// set deployment status based on the result of the previus step
-	// send an update to websockets if needed to update the UI live
-	// store deployment in database
-
-	return nil
 }
