@@ -5,7 +5,15 @@ import (
 	"sync"
 )
 
+type executible interface {
+	Execute(context.Context, int) error
+}
+
 type Task func(context.Context, int) error
+
+func (t Task) Execute(ctx context.Context, id int) error {
+	return t(ctx, id)
+}
 
 type TaskError struct {
 	WorkerId int
@@ -23,15 +31,14 @@ func NewTaskError(workerId int, err error) TaskError {
 	}
 }
 
-
-func worker(ctx context.Context, id int, tasks <-chan Task, errors chan<- error, wg *sync.WaitGroup) {
+func worker(ctx context.Context, id int, tasks <-chan executible, errors chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case t := <-tasks:
-			err := t(ctx, id)
+			err := t.Execute(ctx, id)
 			if err != nil {
 				errors <- NewTaskError(id, err)
 			}
@@ -41,14 +48,14 @@ func worker(ctx context.Context, id int, tasks <-chan Task, errors chan<- error,
 
 type WorkerPool struct {
 	workerCount int
-	tasks       chan Task
+	tasks       chan executible
 	errors      chan<- error
 	wg          *sync.WaitGroup
 }
 
 func NewWorkerPool(workerCount int, workerBuffer int) *WorkerPool {
 	cSizes := workerCount * workerBuffer
-	tasks := make(chan Task, cSizes)
+	tasks := make(chan executible, cSizes)
 	errors := make(chan error, cSizes)
 
 	return &WorkerPool{
@@ -76,6 +83,6 @@ func (p *WorkerPool) Close() {
 	p.Wait()
 }
 
-func (p *WorkerPool) Submit(t Task) {
+func (p *WorkerPool) Submit(t executible) {
 	p.tasks <- t
 }

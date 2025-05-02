@@ -8,9 +8,11 @@ import (
 )
 
 const (
-	DeploymentStatusPending   = "pending"
-	DeploymentStatusSucceeded = "succeeded"
-	DeploymentStatusFailed    = "failed"
+	DeploymentStatusDeploying               = "deploying"
+	DeploymentStatusImageUploaded           = "image-uploaded"
+	DeploymentStatusInstantiatingContainers = "instantiating-containers"
+	DeploymentStatusReady                   = "ready"
+	DeploymentStatusFailed                  = "failed"
 )
 
 type Deployment struct {
@@ -30,13 +32,14 @@ type DeploymentReplica struct {
 	ID           uuid.UUID `db:"id" json:"id"`
 	DeploymentID uuid.UUID `db:"deployment_id" json:"deploymentId"`
 	Status       string    `db:"status" json:"status"`
+	NodeID       string    `db:"node_id" json:"nodeId"`
 }
 
 func NewDeployment(name string, githubRepo string, githubBranch string, targetReplicaCount int) *Deployment {
 	return &Deployment{
 		ID:                 uuid.New(),
 		Name:               name,
-		Status:             DeploymentStatusPending,
+		Status:             DeploymentStatusDeploying,
 		TargetReplicaCount: targetReplicaCount,
 		ReplicaCount:       0,
 		GithubRepo:         githubRepo,

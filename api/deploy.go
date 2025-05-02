@@ -88,12 +88,16 @@ func (d DeployHandlers) uploadImage(ctx context.Context, cli *client.Client, pat
 
 func (d DeployHandlers) deploy(ctx context.Context, deployment *deployments.Deployment, request DeployRequest) workerpool.Task {
 	return func(ctx context.Context, id int) error {
+		defer deployments.StoreDeployment(d.db, deployment)
+
 		path := "./tmp/clones/" + request.DeploymentName
 
 		err := d.uploadImage(ctx, d.dockerCli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
 		if err != nil {
 			return err
 		}
+
+		deployment.Status = deployments.DeploymentStatusImageUploaded
 
 		// TODO
 		// get list of available agents
