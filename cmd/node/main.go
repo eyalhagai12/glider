@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"glider/api"
+	"glider/workerpool"
 	"log"
+	"net/http"
 
 	"github.com/docker/docker/client"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -21,4 +25,16 @@ func main() {
 	}
 	dockerCli.Ping(ctx)
 	defer dockerCli.Close()
+
+	wp := workerpool.NewWorkerPool(10, 10)
+	wp.Run(ctx)
+	defer wp.Close()
+
+	nodeDeploymentHandler := api.NewNodeDeploymentHandlers(wp, dockerCli)
+	
+	r := gin.Default()
+	r.POST("/deploy", api.HandlerFromFunc(nodeDeploymentHandler.Deploy, http.StatusAccepted))
+	if err := r.Run(); err != nil {
+		panic(err)
+	}
 }
