@@ -33,8 +33,10 @@ func main() {
 	workerPool.Run(context.Background())
 
 	deployHandlers := api.NewDeployHandlers(db, workerPool, cli)
+	nodesHandlers := api.NewNodeHandlers(db)
 
 	r.POST("/deploy", api.HandlerFromFunc(deployHandlers.Deploy, http.StatusAccepted))
+	r.POST("/nodes", api.HandlerFromFunc(nodesHandlers.RegisterNewNode, http.StatusCreated))
 	r.Run()
 	workerPool.Close()
 }

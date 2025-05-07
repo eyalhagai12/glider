@@ -79,7 +79,8 @@ func (d DeployHandlers) uploadImage(ctx context.Context, cli *client.Client, pat
 	}
 	defer image.Body.Close()
 
-	if err := images.StoreImage(ctx, cli, deploymentName, namespace, tag); err != nil {
+	imageName := images.FormatImageName(deploymentName, namespace, tag)
+	if err := images.StoreImage(ctx, cli, imageName, images.RegistryAuth{}); err != nil {
 		return err
 	}
 

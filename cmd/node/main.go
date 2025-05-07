@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"glider/api"
+	"glider/nodeapi"
 	"glider/workerpool"
 	"log"
 	"net/http"
@@ -30,10 +31,12 @@ func main() {
 	wp.Run(ctx)
 	defer wp.Close()
 
-	nodeDeploymentHandler := api.NewNodeDeploymentHandlers(wp, dockerCli)
-	
+	nodeDeploymentHandler := nodeapi.NewNodeDeploymentHandlers(wp, dockerCli)
+
 	r := gin.Default()
 	r.POST("/deploy", api.HandlerFromFunc(nodeDeploymentHandler.Deploy, http.StatusAccepted))
+	r.GET("/metrics", api.HandlerFromFunc(nodeDeploymentHandler.ReportMetrics, http.StatusOK))
+
 	if err := r.Run(); err != nil {
 		panic(err)
 	}
