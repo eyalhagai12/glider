@@ -54,9 +54,12 @@ func (h NodeHandlers) ReportMetrics(c *gin.Context, _ any) (resources.ResourceRe
 	}
 
 	response := resources.ResourceResponse{
-		CPUs:   cpuData,
-		Memory: memoryData,
-		Disks:  disks,
+		NodeResources: resources.NodeResources{
+			CPUs:   cpuData,
+			Memory: memoryData,
+			Disks:  disks,
+		},
+		Containers: []resources.ContainerUtilization{},
 	}
 
 	return response, nil

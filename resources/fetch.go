@@ -63,3 +63,26 @@ func FetchMemory() (Memory, error) {
 		Total: float32(ram.Total) / (1024 * 1024 * 1024),
 	}, nil
 }
+
+func FetchNodeUtilization() (NodeResources, error) {
+	disks, err := FetchDisks()
+	if err != nil {
+		return NodeResources{}, err
+	}
+	
+	cpuData, err := FetchCPUs()
+	if err != nil {
+		return NodeResources{}, err
+	}
+
+	memoryData, err := FetchMemory()
+	if err != nil {
+		return NodeResources{}, err
+	}
+
+	return NodeResources{
+		CPUs:   cpuData,
+		Memory: memoryData,
+		Disks:  disks,
+	}, nil
+}

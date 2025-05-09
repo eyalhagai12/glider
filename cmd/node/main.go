@@ -4,6 +4,7 @@ import (
 	"context"
 	"glider/api"
 	"glider/nodeapi"
+	"glider/nodes"
 	"glider/workerpool"
 	"log"
 	"net/http"
@@ -26,6 +27,11 @@ func main() {
 	}
 	dockerCli.Ping(ctx)
 	defer dockerCli.Close()
+
+	err = nodes.RegisterNode("http://localhost:8080")
+	if err != nil {
+		log.Fatalf("Error registering node: %v", err)
+	}
 
 	wp := workerpool.NewWorkerPool(10, 10)
 	wp.Run(ctx)
