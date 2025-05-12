@@ -28,7 +28,7 @@ func main() {
 	dockerCli.Ping(ctx)
 	defer dockerCli.Close()
 
-	err = nodes.RegisterNode("http://localhost:8080")
+	_, err = nodes.RegisterNode("http://localhost:8080")
 	if err != nil {
 		log.Fatalf("Error registering node: %v", err)
 	}
@@ -43,7 +43,7 @@ func main() {
 	r.POST("/deploy", api.HandlerFromFunc(nodeDeploymentHandler.Deploy, http.StatusAccepted))
 	r.GET("/metrics", api.HandlerFromFunc(nodeDeploymentHandler.ReportMetrics, http.StatusOK))
 
-	if err := r.Run(); err != nil {
+	if err := r.Run(":8081"); err != nil {
 		panic(err)
 	}
 }

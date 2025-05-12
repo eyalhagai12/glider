@@ -18,20 +18,21 @@ import (
 )
 
 type Config struct {
-	DatabaseURL             string `env:"DATABASE_URL"`
-	DatabaseMaxIdleConns    int64  `env:"DATABASE_MAX_IDLE_CONNS"`
-	DatabaseMaxOpenConns    int64  `env:"DATABASE_MAX_OPEN_CONNS"`
-	DatabaseConnMaxLifetime int64  `env:"DATABASE_CONN_MAX_LIFETIME"`
+	DatabaseURL             string
+	DatabaseMaxIdleConns    int64
+	DatabaseMaxOpenConns    int64
+	DatabaseConnMaxLifetime int64
 }
 
 func loadConfig() Config {
 	godotenv.Load()
 
 	var conf Config
-	conf.DatabaseURL, _ = os.LookupEnv("DATABASE_URL")
-	conf.DatabaseMaxIdleConns, _ = strconv.ParseInt(os.Getenv("DATABASE_MAX_IDLE_CONNS"), 10, 64)
-	conf.DatabaseMaxOpenConns, _ = strconv.ParseInt(os.Getenv("DATABASE_MAX_OPEN_CONNS"), 10, 64)
-	conf.DatabaseConnMaxLifetime, _ = strconv.ParseInt(os.Getenv("DATABASE_CONN_MAX_LIFETIME"), 10, 64)
+
+	conf.DatabaseURL, _ = os.LookupEnv("DB_CONNECTION_STRING")
+	conf.DatabaseMaxIdleConns, _ = strconv.ParseInt(os.Getenv("DB_MAX_IDLE_CONNS"), 10, 64)
+	conf.DatabaseMaxOpenConns, _ = strconv.ParseInt(os.Getenv("DB_MAX_OPEN_CONNS"), 10, 64)
+	conf.DatabaseConnMaxLifetime, _ = strconv.ParseInt(os.Getenv("DB_CONN_MAX_LIFETIME"), 10, 64)
 
 	return conf
 }

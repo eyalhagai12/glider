@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
@@ -23,7 +24,11 @@ type NodeRegistrationRequest struct {
 	MetricsURL    string `json:"metrics_url"`
 }
 
-func CheckNodeFileExists(filePath string, nodeID uuid.UUID) (bool, error) {
+type NodeRegistrationResponse struct {
+	NodeUUID string `json:"id"`
+}
+
+func CheckNodeFileExists(filePath string) (bool, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -41,6 +46,13 @@ func CreateNodeFile(filePath string, nodeID uuid.UUID) error {
 		ID:       nodeID,
 		OS:       "linux",
 		Hostname: "localhost",
+	}
+
+	dirPath := strings.Split(filePath, "/")[:len(strings.Split(filePath, "/"))-2]
+	dirPathStr := strings.Join(dirPath, "/")
+	err := os.MkdirAll(dirPathStr, os.ModePerm)
+	if err != nil {
+		return err
 	}
 
 	file, err := os.Create(filePath)
@@ -93,10 +105,10 @@ func GetPublicIP() (string, error) {
 	return string(ip), nil
 }
 
-func SendRegisterRequest(orchestratorURL string, nodeID uuid.UUID) error {
+func SendRegisterRequest(orchestratorURL string) (NodeRegistrationResponse, error) {
 	ip, err := GetPublicIP()
 	if err != nil {
-		return err
+		return NodeRegistrationResponse{}, err
 	}
 
 	deployURL := fmt.Sprintf("http://%s/deploy", ip)
@@ -107,48 +119,61 @@ func SendRegisterRequest(orchestratorURL string, nodeID uuid.UUID) error {
 		"metrics_url":    metricsURL,
 	})
 	if err != nil {
-		return err
+		return NodeRegistrationResponse{}, err
 	}
 
-	req, err := http.NewRequest("POST", orchestratorURL+"/node/register", bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", orchestratorURL+"/nodes/register", bytes.NewBuffer(requestBody))
 	if err != nil {
-		return err
+		return NodeRegistrationResponse{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	cli := http.Client{}
-	_, err = cli.Do(req)
+	raw_response, err := cli.Do(req)
 	if err != nil {
-		return err
+		return NodeRegistrationResponse{}, err
+	}
+	defer raw_response.Body.Close()
+
+	var response NodeRegistrationResponse
+	if err := json.NewDecoder(raw_response.Body).Decode(&response); err != nil {
+		return NodeRegistrationResponse{}, err
+	}
+	if raw_response.StatusCode != http.StatusCreated {
+		return NodeRegistrationResponse{}, fmt.Errorf("failed to register node: %s", raw_response.Status)
 	}
 
-	return nil
+	return response, nil
 }
 
-func RegisterNode(orchestratorURL string) error {
+func RegisterNode(orchestratorURL string) (NodeMetadata, error) {
 	filePath := "./.metadata/node.yaml"
-	ok, err := CheckNodeFileExists(filePath, uuid.Nil)
+	ok, err := CheckNodeFileExists(filePath)
 	if err != nil {
-		return err
+		return NodeMetadata{}, err
 	}
 
 	if !ok {
-		nodeID := uuid.New()
-		err := CreateNodeFile(filePath, nodeID)
+		nodeRegData, err := SendRegisterRequest(orchestratorURL)
 		if err != nil {
-			return err
+			return NodeMetadata{}, err
+		}
+
+		nodeUUID, err := uuid.Parse(nodeRegData.NodeUUID)
+		if err != nil {
+			return NodeMetadata{}, err
+		}
+
+		err = CreateNodeFile(filePath, nodeUUID)
+		if err != nil {
+			return NodeMetadata{}, err
 		}
 	}
 
 	nodeMetadata, err := ReadNodeFile(filePath)
 	if err != nil {
-		return err
+		return NodeMetadata{}, err
 	}
 
-	err = SendRegisterRequest(orchestratorURL, nodeMetadata.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return nodeMetadata, nil
 }

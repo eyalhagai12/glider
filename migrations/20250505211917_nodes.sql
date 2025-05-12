@@ -2,8 +2,9 @@
 -- +goose StatementBegin
 CREATE TABLE nodes (
     id UUID PRIMARY KEY,
-    url VARCHAR(8000) NOT NULL
-)
+    deployment_url VARCHAR(8000) NOT NULL,
+    metrics_url VARCHAR(8000) NOT NULL
+);
 -- +goose StatementEnd
 
 -- +goose Down

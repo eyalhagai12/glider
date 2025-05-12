@@ -5,8 +5,7 @@ services:
       - ../..:/workspaces:cached
     command: sleep infinity
     container_name: glider-devcontainer
-    networks:
-      - glider
+
 
   db:
     image: postgres:latest
@@ -21,8 +20,7 @@ services:
       POSTGRES_USER: glider
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "glider"]
-    networks:
-      - glider
+
   
   registry:
     image: registry:latest
@@ -32,8 +30,7 @@ services:
     volumes:
       - registry-data:/var/lib/registry
     restart: always
-    networks:
-      - glider
+
   
   registry-ui:
     image: joxit/docker-registry-ui:main
@@ -53,13 +50,7 @@ services:
       - REGISTRY_SECURED=false
       - CATALOG_ELEMENTS_LIMIT=1000
     container_name: registry-ui
-    networks:
-      - glider
 
 volumes:
   postgres-data:
   registry-data:
-
-networks:
-  glider:
-    driver: bridge
