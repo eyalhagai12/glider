@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -37,6 +38,10 @@ func CheckNodeFileExists(filePath string) (bool, error) {
 		return false, err
 	}
 	defer file.Close()
+
+	if file != nil {
+		return true, nil
+	}
 
 	return false, nil
 }
@@ -105,14 +110,14 @@ func GetPublicIP() (string, error) {
 	return string(ip), nil
 }
 
-func SendRegisterRequest(orchestratorURL string) (NodeRegistrationResponse, error) {
+func SendRegisterRequest(orchestratorURL string, nodePort string) (NodeRegistrationResponse, error) {
 	ip, err := GetPublicIP()
 	if err != nil {
 		return NodeRegistrationResponse{}, err
 	}
 
-	deployURL := fmt.Sprintf("http://%s/deploy", ip)
-	metricsURL := fmt.Sprintf("http://%s/metrics", ip)
+	deployURL := fmt.Sprintf("http://%s:%s/deploy", ip, nodePort)
+	metricsURL := fmt.Sprintf("http://%s:%s/metrics", ip, nodePort)
 
 	requestBody, err := json.Marshal(map[string]string{
 		"deployment_url": deployURL,
@@ -148,13 +153,16 @@ func SendRegisterRequest(orchestratorURL string) (NodeRegistrationResponse, erro
 
 func RegisterNode(orchestratorURL string) (NodeMetadata, error) {
 	filePath := "./.metadata/node.yaml"
+	logger := log.New(os.Stdout, "INFO: ", log.LstdFlags)
+
 	ok, err := CheckNodeFileExists(filePath)
 	if err != nil {
 		return NodeMetadata{}, err
 	}
 
 	if !ok {
-		nodeRegData, err := SendRegisterRequest(orchestratorURL)
+		logger.Println("Node file does not exist, registering node...")
+		nodeRegData, err := SendRegisterRequest(orchestratorURL, "8081")
 		if err != nil {
 			return NodeMetadata{}, err
 		}
@@ -168,6 +176,7 @@ func RegisterNode(orchestratorURL string) (NodeMetadata, error) {
 		if err != nil {
 			return NodeMetadata{}, err
 		}
+		logger.Println("Node registered successfully, node file created.")
 	}
 
 	nodeMetadata, err := ReadNodeFile(filePath)

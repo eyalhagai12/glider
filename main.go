@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"glider/api"
 	"glider/workerpool"
@@ -59,6 +60,7 @@ func main() {
 	}
 
 	workerPool := workerpool.NewWorkerPool(10, 10)
+	workerPool.Run(context.Background())
 	defer workerPool.Close()
 
 	initViews(r, db, cli, workerPool)

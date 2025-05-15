@@ -5,7 +5,9 @@ import (
 	"glider/images"
 	"glider/resources"
 	"glider/workerpool"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
@@ -24,15 +26,28 @@ func NewNodeDeploymentHandlers(workerPool *workerpool.WorkerPool, dockerCli *cli
 }
 
 func (h NodeHandlers) Deploy(c *gin.Context, request NodeDeployRequest) ([]containers.Container, error) {
+	logger := log.Default()
+	logger.SetOutput(os.Stdout)
+	logger.SetFlags(log.LstdFlags | log.Lshortfile)
+	logger.SetPrefix("Agent: ")
+
+	logger.Println("Starting deployment...")
+	logger.Printf("Pulling image %s...\n", request.Image)
 	err := images.PullImage(c, h.dockerCli, request.Image, images.RegistryAuth{})
 	if err != nil {
 		return nil, err
 	}
 
+	logger.Printf("Deploying %s...\n", request.DeploymentName)
+
 	containerList, err := containers.DeployConainers(c, h.dockerCli, request.DeploymentName, request.DeploymentUUID, request.Image, request.Replicas, request.NodeUUID)
 	if err != nil {
+		logger.Printf("Error deploying containers: %v\n", err)
 		return nil, err
 	}
+
+	logger.Printf("Deployment %s completed successfully.\n", request.DeploymentName)
+	logger.Printf("Containers deployed: %d\n", len(containerList))
 	return containerList, nil
 }
 

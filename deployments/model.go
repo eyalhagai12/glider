@@ -28,12 +28,6 @@ type Deployment struct {
 	DeletedAt          pq.NullTime `db:"deleted_at" json:"deletedAt"`
 }
 
-type DeploymentReplica struct {
-	ID           uuid.UUID `db:"id" json:"id"`
-	DeploymentID uuid.UUID `db:"deployment_id" json:"deploymentId"`
-	Status       string    `db:"status" json:"status"`
-	NodeID       string    `db:"node_id" json:"nodeId"`
-}
 
 func NewDeployment(name string, githubRepo string, githubBranch string, targetReplicaCount int) *Deployment {
 	return &Deployment{

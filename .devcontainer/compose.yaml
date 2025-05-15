@@ -51,6 +51,20 @@ services:
       - CATALOG_ELEMENTS_LIMIT=1000
     container_name: registry-ui
 
+  pg-admin:
+    image: dpage/pgadmin4:latest
+    container_name: glider-pgadmin
+    ports:
+      - 82:80
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: glider@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: glider123
+    depends_on:
+      - db
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
 volumes:
   postgres-data:
   registry-data:
+  pgadmin-data:
