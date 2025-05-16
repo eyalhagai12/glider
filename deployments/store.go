@@ -48,9 +48,8 @@ func GetDeployment(db *sqlx.DB, id uuid.UUID) (*Deployment, error) {
 	return &deployment, nil
 }
 
-// UpdateDeployment updates a deployment in the database
 func UpdateDeployment(db *sqlx.DB, deployment *Deployment) error {
-	_, err := db.Exec(`
+	result, err := db.Exec(`
 		UPDATE deployments SET
 			status = $1,
 			target_replica_count = $2,
@@ -59,6 +58,17 @@ func UpdateDeployment(db *sqlx.DB, deployment *Deployment) error {
 			github_branch = $5
 		WHERE id = $6
 	`, deployment.Status, deployment.TargetReplicaCount, deployment.ReplicaCount, deployment.GithubRepo, deployment.GithubBranch, deployment.ID)
+	if err != nil {
+		return err
+	}
 
-	return err
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }

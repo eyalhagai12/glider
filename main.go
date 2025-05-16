@@ -6,6 +6,7 @@ import (
 	"glider/api"
 	"glider/workerpool"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -40,12 +41,19 @@ func loadConfig() Config {
 
 func main() {
 	cfg := loadConfig()
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	})
+	logger := slog.New(logHandler)
+	slog.SetDefault(logger)
 
 	r := gin.Default()
 	os.Setenv("DOCKER_BUILDKIT", "1")
 
-	logger := log.Default()
-	logger.Printf("connecting to database %s", cfg.DatabaseURL)
+	logger.Info("Starting glider node...")
+	logger.Info("Connecting to database", slog.String("database_url", cfg.DatabaseURL))
+
 	db, err := sqlx.Connect("postgres", cfg.DatabaseURL)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to connect to the database: %v", err))
@@ -63,13 +71,13 @@ func main() {
 	workerPool.Run(context.Background())
 	defer workerPool.Close()
 
-	initViews(r, db, cli, workerPool)
+	initViews(r, db, logger, cli, workerPool)
 
 	r.Run()
 }
 
-func initViews(r *gin.Engine, db *sqlx.DB, cli *client.Client, workerPool *workerpool.WorkerPool) {
-	deployHandlers := api.NewDeployHandlers(db, workerPool, cli)
+func initViews(r *gin.Engine, db *sqlx.DB, logger *slog.Logger, cli *client.Client, workerPool *workerpool.WorkerPool) {
+	deployHandlers := api.NewDeployHandlers(db, workerPool, logger, cli)
 	nodesHandlers := api.NewNodeHandlers(db)
 
 	r.POST("/deploy", api.HandlerFromFunc(deployHandlers.Deploy, http.StatusAccepted))

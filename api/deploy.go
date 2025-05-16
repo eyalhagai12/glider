@@ -12,7 +12,7 @@ import (
 	"glider/nodes"
 	"glider/workerpool"
 	"io"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"os"
@@ -20,7 +20,6 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -29,13 +28,15 @@ type DeployHandlers struct {
 	db         *sqlx.DB
 	workerPool *workerpool.WorkerPool
 	dockerCli  *client.Client
+	logger     *slog.Logger
 }
 
-func NewDeployHandlers(db *sqlx.DB, workerPool *workerpool.WorkerPool, dockerCli *client.Client) DeployHandlers {
+func NewDeployHandlers(db *sqlx.DB, workerPool *workerpool.WorkerPool, logger *slog.Logger, dockerCli *client.Client) DeployHandlers {
 	return DeployHandlers{
 		db:         db,
 		workerPool: workerPool,
 		dockerCli:  dockerCli,
+		logger:     logger,
 	}
 }
 
@@ -74,11 +75,6 @@ func (d DeployHandlers) uploadImage(ctx context.Context, cli *client.Client, pat
 }
 
 func (d DeployHandlers) sendRequestToAgent(deployment *deployments.Deployment, node *nodes.Node, namespace string, tag string) ([]containers.Container, error) {
-	logger := log.Default()
-	logger.SetOutput(os.Stdout)
-	logger.SetFlags(log.LstdFlags | log.Lshortfile)
-	logger.SetPrefix("glider: ")
-
 	agentClient := &http.Client{}
 	req, err := http.NewRequest("POST", node.DeploymentURL, nil)
 	if err != nil {
@@ -96,27 +92,29 @@ func (d DeployHandlers) sendRequestToAgent(deployment *deployments.Deployment, n
 
 	body, err := json.Marshal(nodeDeployRequest)
 	if err != nil {
+		d.logger.Error("Failed to marshal request body\n", "error", err)
 		return nil, err
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(body))
 	resp, err := agentClient.Do(req)
 	if err != nil {
+		d.logger.Error("Failed to send request to agent\n", "error", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		logger.Printf("Failed to deploy on node: %s\n", resp.Status)
+		d.logger.Error("Failed to deploy on node\n", "status", resp.Status)
 		return nil, fmt.Errorf("failed to deploy on node: %s", resp.Status)
 	}
 
 	var containerList []containers.Container
 	if err := json.NewDecoder(resp.Body).Decode(&containerList); err != nil {
-		logger.Printf("Failed to decode response: %v\n", err)
+		d.logger.Error("Failed to decode response\n", "error", err)
 		return nil, err
 	}
 	if len(containerList) == 0 {
-		logger.Printf("No containers deployed\n")
+		d.logger.Error("No containers deployed\n")
 		return nil, fmt.Errorf("no containers deployed")
 	}
 
@@ -125,46 +123,45 @@ func (d DeployHandlers) sendRequestToAgent(deployment *deployments.Deployment, n
 
 func (d DeployHandlers) deploy(deployment *deployments.Deployment, request DeployRequest) workerpool.Task {
 	return func(ctx context.Context, id int) error {
-		defer deployments.StoreDeployment(d.db, deployment)
+		defer func(deployment *deployments.Deployment) {
+			d.logger.Info("Updating deployment status\n", "deployment ID", deployment.ID)
+			err := deployments.UpdateDeployment(d.db, deployment)
+			if err != nil {
+				d.logger.Error("Failed to update deployment\n", "error", err)
+			} else {
+				d.logger.Info("Deployment updated successfully\n", "deployment name", deployment.Name, "status", deployment.Status)
+			}
+		}(deployment)
 
-		logger := log.Default()
-		logger.SetOutput(os.Stdout)
-		logger.SetFlags(log.LstdFlags | log.Lshortfile)
-		logger.SetPrefix("glider: ")
-		logger.Printf("Worker %d started for deployment %s\n", id, request.DeploymentName)
+		logger := slog.Default()
 
 		path := "./tmp/clones/" + request.DeploymentName
-
-		logger.Printf("Cloning repository %s at branch %s\n", request.GithubRepo, request.GithubBranch)
-		logger.Printf("Building image for deployment %s\n", request.DeploymentName)
-		logger.Printf("Using Dockerfile at %s\n", request.DockerfilePath)
-		logger.Printf("Using tag %s\n", request.Tag)
-		logger.Printf("Using namespace %s\n", request.Namespace)
-		logger.Printf("Using replicas %d\n", request.Replicas)
-
 		err := d.uploadImage(ctx, d.dockerCli, path, request.GithubRepo, request.GithubBranch, request.DeploymentName, request.DockerfilePath, request.Tag, request.Namespace)
 		if err != nil {
+			logger.Error("Failed to upload image\n", "error", err)
 			return err
 		}
 
 		deployment.Status = deployments.DeploymentStatusImageUploaded
 		deployment.UpdatedAt = time.Now()
 
-		logger.Printf("Image %s uploaded successfully\n", request.DeploymentName)
-		logger.Printf("Fetching available nodes\n")
+		logger.Info("Image uploaded successfully\n", "image", images.FormatImageName(deployment.Name, request.Namespace, request.Tag))
+		logger.Info("Fetching available nodes\n")
 
 		nodes, err := nodes.GetAvailableNodes(d.db)
 		if err != nil {
+			logger.Error("Failed to fetch available nodes\n", "error", err)
 			return err
 		}
 
-		logger.Printf("Found %d available nodes\n", len(nodes))
+		logger.Info("Found available nodes\n", "count", len(nodes))
 
 		if len(nodes) == 0 {
+			logger.Error("No available nodes\n")
 			return fmt.Errorf("no available nodes")
 		}
 
-		logger.Printf("Selecting a node\n")
+		logger.Info("Selecting a node\n")
 
 		randomIndex := rand.Intn(len(nodes))
 		node := nodes[randomIndex]
@@ -178,15 +175,13 @@ func (d DeployHandlers) deploy(deployment *deployments.Deployment, request Deplo
 		deployment.DeletedAt = pq.NullTime{}
 		deployment.CreatedAt = time.Now()
 		deployment.UpdatedAt = time.Now()
-		deployment.ID = uuid.New()
 
-		logger.Printf("Sending deploy request to node at: %s\n", node.DeploymentURL)
-		logger.Printf("Node UUID: %s\n", node.ID)
-		logger.Printf("Deployment UUID: %s\n", deployment.ID)
-		logger.Printf("Deployment name: %s\n", deployment.Name)
+		logger.Info("Sending deploy request to node\n", "node deploy address", node.DeploymentURL, "node uuid", node.ID)
+		logger.Info("Deploying", "deployment name", deployment.Name, "image", images.FormatImageName(deployment.Name, request.Namespace, request.Tag), "replicas", request.Replicas, "deployment uuid", deployment.ID)
 
 		containers, err := d.sendRequestToAgent(deployment, &node, request.Namespace, request.Tag)
 		if err != nil {
+			logger.Error("Failed to send request to agent\n", "error", err)
 			return err
 		}
 
@@ -194,10 +189,9 @@ func (d DeployHandlers) deploy(deployment *deployments.Deployment, request Deplo
 		deployment.ReplicaCount = len(containers)
 		deployment.UpdatedAt = time.Now()
 
-		logger.Printf("Deployment %s is ready with %d replicas\n", deployment.Name, len(containers))
-		logger.Printf("Containers deployed: %v\n", containers)
-		logger.Printf("Deployment %s completed successfully\n", deployment.Name)
-		logger.Printf("Worker %d finished for deployment %s\n", id, request.DeploymentName)
+		logger.Info("Deployment is ready\n", "deployment name", deployment.Name, "active replicas", len(containers))
+		logger.Info("Containers deployed\n", "count", containers)
+		logger.Info("Deployment completed successfully\n", "deployment name", deployment.Name)
 
 		return nil
 	}
