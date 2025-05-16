@@ -49,12 +49,11 @@ func main() {
 
 	logger.Println("Worker pool started successfully.")
 
-
 	nodeDeploymentHandler := nodeapi.NewNodeDeploymentHandlers(wp, dockerCli)
 
 	logger.Println("Starting HTTP server...")
 	r := gin.Default()
-	r.POST("/deploy", api.HandlerFromFunc(nodeDeploymentHandler.Deploy, http.StatusAccepted))
+	r.POST("/deploy", api.HandlerFromFunc(nodeDeploymentHandler.Deploy, http.StatusCreated))
 	r.GET("/metrics", api.HandlerFromFunc(nodeDeploymentHandler.ReportMetrics, http.StatusOK))
 
 	if err := r.Run(":8081"); err != nil {

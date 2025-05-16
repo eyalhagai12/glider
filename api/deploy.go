@@ -90,7 +90,7 @@ func (d DeployHandlers) sendRequestToAgent(deployment *deployments.Deployment, n
 		Image:          images.FormatImageName(deployment.Name, namespace, tag),
 		DeploymentName: deployment.Name,
 		DeploymentUUID: deployment.ID,
-		Replicas:       deployment.ReplicaCount,
+		Replicas:       deployment.TargetReplicaCount,
 		NodeUUID:       node.ID,
 	}
 
@@ -105,7 +105,7 @@ func (d DeployHandlers) sendRequestToAgent(deployment *deployments.Deployment, n
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusAccepted {
+	if resp.StatusCode != http.StatusCreated {
 		logger.Printf("Failed to deploy on node: %s\n", resp.Status)
 		return nil, fmt.Errorf("failed to deploy on node: %s", resp.Status)
 	}
