@@ -6,6 +6,7 @@ import (
 	"glider/resources"
 	"glider/workerpool"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -16,12 +17,14 @@ import (
 type NodeHandlers struct {
 	workerPool *workerpool.WorkerPool
 	dockerCli  *client.Client
+	logger     *slog.Logger
 }
 
-func NewNodeDeploymentHandlers(workerPool *workerpool.WorkerPool, dockerCli *client.Client) NodeHandlers {
+func NewNodeDeploymentHandlers(workerPool *workerpool.WorkerPool, dockerCli *client.Client, logger *slog.Logger) NodeHandlers {
 	return NodeHandlers{
 		workerPool: workerPool,
 		dockerCli:  dockerCli,
+		logger:     logger,
 	}
 }
 

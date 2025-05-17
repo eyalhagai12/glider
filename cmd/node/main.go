@@ -7,7 +7,9 @@ import (
 	"glider/nodes"
 	"glider/workerpool"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
@@ -16,16 +18,15 @@ import (
 
 func main() {
 	ctx := context.Background()
-	logger := log.Default()
-	logger.SetFlags(log.LstdFlags | log.Lshortfile)
-	logger.SetPrefix("glider: ")
-	logger.Println("Starting glider node...")
-	logger.Println("Loading environment variables...")
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+	logger := slog.New(logHandler)
+	logger.Info("Starting glider node...")
+	logger.Info("Loading environment variables...")
 
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
-	logger.Println("Environment variables loaded successfully.")
+	logger.Info("Environment variables loaded successfully.")
 
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -34,24 +35,24 @@ func main() {
 	dockerCli.Ping(ctx)
 	defer dockerCli.Close()
 
-	logger.Println("Registering node...")
+	logger.Info("Registering node...")
 	_, err = nodes.RegisterNode("http://localhost:8080")
 	if err != nil {
 		log.Fatalf("Error registering node: %v", err)
 	}
-	logger.Println("Node registered successfully.")
-	logger.Println("Starting glider node...")
-	logger.Println("Starting worker pool...")
+	logger.Info("Node registered successfully.")
+	logger.Info("Starting glider node...")
+	logger.Info("Starting worker pool...")
 
 	wp := workerpool.NewWorkerPool(10, 10)
 	wp.Run(ctx)
 	defer wp.Close()
 
-	logger.Println("Worker pool started successfully.")
+	logger.Info("Worker pool started successfully.")
 
-	nodeDeploymentHandler := nodeapi.NewNodeDeploymentHandlers(wp, dockerCli)
+	nodeDeploymentHandler := nodeapi.NewNodeDeploymentHandlers(wp, dockerCli, logger)
 
-	logger.Println("Starting HTTP server...")
+	logger.Info("Starting HTTP server...")
 	r := gin.Default()
 	r.POST("/deploy", api.HandlerFromFunc(nodeDeploymentHandler.Deploy, http.StatusCreated))
 	r.GET("/metrics", api.HandlerFromFunc(nodeDeploymentHandler.ReportMetrics, http.StatusOK))
