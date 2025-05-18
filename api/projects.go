@@ -48,15 +48,16 @@ func (p ProjectHandlers) CreateProject(c *gin.Context, request NewProjectRequest
 		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to store project: %v", err))
 	}
 
-	netIP := "10.0.0.1/24"
-	netPort := "51820"
+	netIP := "10.0.0.1/24" // need to be unique for each project
+	netPort := "51820"     // need to be unique for each project
+	interfaceName := fmt.Sprintf("wg-%s", project.ID.String()[:8])
 
-	net := network.NewNetwork(project.Name, netIP, netPort, project.ID)
+	net := network.NewNetwork(interfaceName, netIP, netPort, project.ID)
 	err = network.InitializeVPN(p.logger, net)
 	if err != nil {
 		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to initialize VPN: %v", err))
 	}
-	
+
 	err = network.StoreNetwork(tx, net)
 	if err != nil {
 		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to store network: %v", err))
