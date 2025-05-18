@@ -28,3 +28,8 @@ type DeployResponse struct {
 	GithubRepo     string `json:"githubRepo"`
 	GithubBranch   string `json:"githubBranch"`
 }
+
+type NewProjectRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

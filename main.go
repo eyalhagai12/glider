@@ -79,7 +79,9 @@ func main() {
 func initViews(r *gin.Engine, db *sqlx.DB, logger *slog.Logger, cli *client.Client, workerPool *workerpool.WorkerPool) {
 	deployHandlers := api.NewDeployHandlers(db, workerPool, logger, cli)
 	nodesHandlers := api.NewNodeHandlers(db)
+	projectHandlers := api.NewProjectHandlers(db, logger)
 
 	r.POST("/deploy", api.HandlerFromFunc(deployHandlers.Deploy, http.StatusAccepted))
 	r.POST("/nodes/register", api.HandlerFromFunc(nodesHandlers.RegisterNewNode, http.StatusCreated))
+	r.POST("/projects", api.HandlerFromFunc(projectHandlers.CreateProject, http.StatusCreated))
 }
