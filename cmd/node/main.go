@@ -50,7 +50,7 @@ func main() {
 
 	logger.Info("Worker pool started successfully.")
 
-	nodeDeploymentHandler := nodeapi.NewNodeDeploymentHandlers(wp, dockerCli, logger)
+	nodeDeploymentHandler := nodeapi.NodeAgentHandlers(wp, dockerCli, logger)
 
 	logger.Info("Starting HTTP server...")
 	r := gin.Default()

@@ -3,6 +3,7 @@ package nodeapi
 import (
 	"glider/containers"
 	"glider/images"
+	"glider/network"
 	"glider/resources"
 	"glider/workerpool"
 	"log"
@@ -20,7 +21,7 @@ type NodeHandlers struct {
 	logger     *slog.Logger
 }
 
-func NewNodeDeploymentHandlers(workerPool *workerpool.WorkerPool, dockerCli *client.Client, logger *slog.Logger) NodeHandlers {
+func NodeAgentHandlers(workerPool *workerpool.WorkerPool, dockerCli *client.Client, logger *slog.Logger) NodeHandlers {
 	return NodeHandlers{
 		workerPool: workerPool,
 		dockerCli:  dockerCli,
@@ -81,4 +82,17 @@ func (h NodeHandlers) ReportMetrics(c *gin.Context, _ any) (resources.ResourceRe
 	}
 
 	return response, nil
+}
+
+func (h NodeHandlers) ConnectToVPN(c *gin.Context, request NodeConnectRequest) error {
+	h.logger.Info("Connecting to VPN", "interface", request.Interface, "ip", request.IP, "endpoint", request.Endpoint)
+
+	if err := network.ConnectToVPN(h.logger, request.Interface, request.IP, request.PublicKey, request.Endpoint, request.AllowedIPs); err != nil {
+		h.logger.Error("Failed to connect to VPN", "error", err)
+		return err
+	}
+
+	h.logger.Info("Connected to VPN successfully", "interface", request.Interface)
+	
+	return nil
 }
