@@ -73,7 +73,7 @@ func main() {
 
 	initViews(r, db, logger, cli, workerPool)
 
-	r.Run()
+	r.Run("0.0.0.0:8080")
 }
 
 func initViews(r *gin.Engine, db *sqlx.DB, logger *slog.Logger, cli *client.Client, workerPool *workerpool.WorkerPool) {

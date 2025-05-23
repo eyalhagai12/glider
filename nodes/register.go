@@ -118,10 +118,14 @@ func SendRegisterRequest(orchestratorURL string, nodePort string) (NodeRegistrat
 
 	deployURL := fmt.Sprintf("http://%s:%s/deploy", ip, nodePort)
 	metricsURL := fmt.Sprintf("http://%s:%s/metrics", ip, nodePort)
+	healthURL := fmt.Sprintf("http://%s:%s/health", ip, nodePort)
+	connectionURL := fmt.Sprintf("http://%s:%s/connect", ip, nodePort)
 
 	requestBody, err := json.Marshal(map[string]string{
 		"deployment_url": deployURL,
 		"metrics_url":    metricsURL,
+		"health_url":     healthURL,
+		"connection_url": connectionURL,
 	})
 	if err != nil {
 		return NodeRegistrationResponse{}, err

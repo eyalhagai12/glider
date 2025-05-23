@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -83,6 +84,7 @@ func InitializeVPN(logger *slog.Logger, net *Network) error {
 
 	logger.Info("WireGuard VPN interface initialized", "interface", interfaceName)
 
+	net.PublicKey = publicKey.String()
 	return nil
 }
 
@@ -129,4 +131,40 @@ func ConnectToVPN(logger *slog.Logger, interfaceName string, ipAddress string, p
 	logger.Info("WireGuard VPN connection established", "interface", interfaceName, "ip", ipAddress, "endpoint", endpoint)
 
 	return nil
+}
+
+func GetVPNConnectionRequest(interfaceName string, ipAddress string, port string, publicKey string, allowedIPs string) map[string]any {
+	iface, err := net.InterfaceByName("eth0")
+	if err != nil {
+		panic(err)
+	}
+
+	addrs, err := iface.Addrs()
+	if err != nil {
+		panic(err)
+	}
+
+	var endpoint string
+	for _, addr := range addrs {
+		var ip net.IP
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ip = v.IP
+		case *net.IPAddr:
+			ip = v.IP
+		}
+
+		if ip != nil && !ip.IsLoopback() && ip.To4() != nil {
+			endpoint = ip.String() + ":" + port
+		}
+	}
+
+	return map[string]any{
+		"interface":           interfaceName,
+		"ip":                  ipAddress,
+		"publicKey":           publicKey,
+		"endpoint":            endpoint,
+		"allowedIPs":          allowedIPs,
+		"persistentKeepalive": 25,
+	}
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"glider/network"
+	"glider/nodes"
 	"glider/projects"
 	"log/slog"
 	"net/http"
@@ -63,8 +64,30 @@ func (p ProjectHandlers) CreateProject(c *gin.Context, request NewProjectRequest
 		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to store network: %v", err))
 	}
 
+	err = broadcastNetworkToAgentNodes(p.db, net)
+	if err != nil {
+		return nil, c.AbortWithError(http.StatusInternalServerError, fmt.Errorf("failed to broadcast network to agent nodes: %v", err))
+	}
+
 	p.logger.Info("Network initialized successfully", "networkID", net.ID)
+	p.logger.Info("Successfully broadcasted network to agent nodes", "networkID", net.ID)
 	p.logger.Info("Project created successfully", "projectID", project.ID)
 
 	return project, nil
+}
+
+func broadcastNetworkToAgentNodes(db *sqlx.DB, network *network.Network) error {
+	nodes, err := nodes.GetAvailableNodes(db)
+	if err != nil {
+		return fmt.Errorf("failed to get available nodes: %v", err)
+	}
+
+	for _, node := range nodes {
+		err := node.AddNetwork(network, network.PublicKey, []string{})
+		if err != nil {
+			return fmt.Errorf("failed to send network info to node %s: %v", node.ID, err)
+		}
+	}
+
+	return nil
 }

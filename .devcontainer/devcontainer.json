@@ -19,7 +19,7 @@
 	"forwardPorts": [8080],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "go install github.com/air-verse/air@latest && sudo apt update && sudo apt install wireguard -y",
+	"postCreateCommand": "go install github.com/air-verse/air@latest",
 
 	// Configure tool-specific properties.
 	"customizations": {

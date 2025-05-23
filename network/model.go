@@ -8,6 +8,8 @@ type Network struct {
 	IpAddress     string    `db:"ip_address"`
 	Port          string    `db:"port"`
 	ProjectID     uuid.UUID `db:"project_id"`
+	PublicKey     string    `db:"public_key"`
+	AllowedIPs    string    `db:"allowed_ips"`
 }
 
 func NewNetwork(interfaceName string, ipAddress string, port string, projectID uuid.UUID) *Network {
