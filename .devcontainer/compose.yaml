@@ -7,6 +7,12 @@ services:
       - ../..:/workspaces:cached
     command: sleep infinity
     container_name: glider-devcontainer
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dev-rtr.rule=PathPrefix(`/dev`)
+      - traefik.http.services.dev-svc.loadbalancer.server.port=8080
+      - traefik.http.routers.dev-rtr.middlewares=dev-stripprefix
+      - traefik.http.middlewares.dev-stripprefix.stripprefix.prefixes=/dev
 
   db:
     image: postgres:latest
@@ -88,9 +94,12 @@ services:
     pull_policy: always
     container_name: headscale-ui
     restart: unless-stopped
+    environment:
+      - HEADSCALE_URL=/headscale
+      - HEADSCALE_ADMIN_TOKEN=Bearer bvgEP5_.A4ORYr065SgfPrf1oakESJgsURs5PgON
     labels:
       - traefik.enable=true
-      - traefik.http.routers.headscale-ui-rtr.rule=PathPrefix(`/headscale-ui`)
+      - traefik.http.routers.headscale-ui-rtr.rule=PathPrefix(`/web`)
       - traefik.http.routers.headscale-ui-rtr.middlewares=ui-stripprefix
       - traefik.http.middlewares.ui-stripprefix.stripprefix.prefixes=/headscale-ui
       - traefik.http.services.headscale-ui-svc.loadbalancer.server.port=8080
