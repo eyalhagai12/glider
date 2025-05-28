@@ -7,9 +7,11 @@ import (
 )
 
 type Image struct {
-	ID      uuid.UUID
-	Name    string
-	Version string
+	ID                  uuid.UUID
+	Name                string
+	Version             string
+	RegistryURL         string
+	ImageDefinitionPath string
 }
 
 func (i *Image) ToString() string {

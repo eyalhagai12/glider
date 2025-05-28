@@ -12,8 +12,11 @@ type Container struct {
 	Name         string
 	DeploymentID uuid.UUID
 	ImageID      uuid.UUID
+
+	Host string
+	Port string
 }
 
 type ContainerService interface {
-	Create(ctx context.Context, container *Container) (*Container, error)
+	Create(ctx context.Context, container *Container, image *Image) (*Container, error)
 }

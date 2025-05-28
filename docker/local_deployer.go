@@ -40,7 +40,7 @@ func (d *LocalDeployer) Deploy(ctx context.Context, deployment *backend.Deployme
 			DeploymentID: deployment.ID,
 			ImageID:      image.ID,
 			Name:         fmt.Sprintf("%s-%d", deployment.Name, replica),
-		})
+		}, image)
 		if err != nil {
 			return nil, err
 		}
