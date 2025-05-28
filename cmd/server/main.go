@@ -13,6 +13,7 @@ func main() {
 	server := http.NewServer("0.0.0.0", "8080")
 
 	server.RegisterUserRoutes()
+	server.RegisterDeploymentsHandler()
 
 	if err := server.Start(); err != nil {
 		log.Fatal(err)

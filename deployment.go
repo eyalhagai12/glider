@@ -7,6 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	DeploymentStatusPending   = "pending"
+	DeploymentStatusDeploying = "deploying"
+	DeploymentStatusFailed    = "failed"
+	DeploymentStatusReady     = "ready"
+)
+
 type Tag struct {
 	ID           uuid.UUID `json:"id"`
 	DeploymentID uuid.UUID `json:"deployment_id"`
@@ -17,20 +24,33 @@ type Tag struct {
 type Deployment struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
-	Description string    `json:"description"`
 	Version     string    `json:"version"`
 	Environment string    `json:"environment"`
-	ProjectID   uuid.UUID `json:"project_id"`
+	ProjectID   uuid.UUID `json:"projectId"`
 	Status      string    `json:"status"`
+	ImageID     uuid.UUID `json:"imageId"`
+	Replicas    int       `json:"replicas"`
 
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt,omitempty"`
 
 	Tags           []Tag          `json:"tags,omitempty"`
-	DeployMetadata map[string]any `json:"deploy_metadata,omitempty"`
+	DeployMetadata map[string]any `json:"deployMetadata,omitempty"`
 }
 
 type DeploymentService interface {
 	Create(ctx context.Context, deployment *Deployment) (*Deployment, error)
+}
+
+func TagsFromList(tags []string) []Tag {
+	result := make([]Tag, len(tags))
+	for i, tag := range tags {
+		result[i] = Tag{
+			Name:     tag,
+			IsSystem: false,
+		}
+	}
+
+	return result
 }

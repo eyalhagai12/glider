@@ -4,6 +4,8 @@ import (
 	backend "glider"
 	"glider/pg"
 	"log"
+	"log/slog"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,10 +16,14 @@ type Server struct {
 	engine    *gin.Engine
 	apiRoutes *gin.RouterGroup
 
+	logger *slog.Logger
+
 	Port string
 	Host string
 
-	userService backend.UserService
+	userService       backend.UserService
+	imageService      backend.ImageService
+	deploymentService backend.DeploymentService
 }
 
 func NewServer(host string, port string) *Server {
@@ -26,11 +32,17 @@ func NewServer(host string, port string) *Server {
 	engine.Use(gin.Logger())
 	engine.Use(gin.ErrorLogger())
 
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+	logger := slog.New(logHandler)
+
 	server := &Server{
 		engine:    engine,
 		apiRoutes: engine.Group(apiRouteGroup),
 		Port:      port,
 		Host:      host,
+		logger:    logger,
 	}
 
 	db, err := pg.NewDatabase()

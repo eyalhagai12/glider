@@ -62,14 +62,14 @@ func (s *UserService) GetByID(ctx context.Context, id uuid.UUID) (*backend.User,
 
 func (s *UserService) GetByUsername(ctx context.Context, username string) (*backend.User, error) {
 	query := `
-		SELECT id, username, email, role, created_at, updated_at
+		SELECT id, username, email, role, hashed_password, created_at, updated_at
 		FROM users
 		WHERE username = $1
 	`
 	row := s.db.QueryRowContext(ctx, query, username)
 
 	user := &backend.User{}
-	if err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt); err != nil {
+	if err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.HashedPassword, &user.CreatedAt, &user.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, backend.ErrNotFound
 		}

@@ -72,6 +72,10 @@ services:
       - db
     volumes:
       - pgadmin-data:/var/lib/pgadmin
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.pg-admin-rtr.rule=PathPrefix(`/pgadmin`)
+      - traefik.http.services.pg-admin-svc.loadbalancer.server.port=80
 
   headscale:
     image: headscale/headscale:latest

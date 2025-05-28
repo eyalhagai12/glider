@@ -18,7 +18,7 @@ type User struct {
 	Username       string    `json:"username"`
 	Email          string    `json:"email"`
 	Role           string    `json:"role"`
-	HashedPassword string    `json:"hashedPassword"`
+	HashedPassword string    `json:"-"`
 
 	CreatedAt string  `json:"created_at"`
 	UpdatedAt string  `json:"updated_at"`
