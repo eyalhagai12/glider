@@ -24,6 +24,6 @@ func (i *Image) ImagePath() string {
 
 type ImageService interface {
 	BuildImage(ctx context.Context, image *Image) (*Image, error)
-	PullImage(ctx context.Context, image *Image) error
-	GetImageByID(ctx context.Context, id uuid.UUID) (*Image, error)
+	PullImage(ctx context.Context, image *Image) (*Image, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*Image, error)
 }

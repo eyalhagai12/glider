@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
+	"github.com/google/uuid"
 	"github.com/moby/go-archive"
 )
 
@@ -79,6 +80,20 @@ func (s *DockerImageService) PullImage(ctx context.Context, img *backend.Image) 
 	defer pullResp.Close()
 
 	return img, nil
+}
+
+func (s *DockerImageService) GetByID(ctx context.Context, id uuid.UUID) (*backend.Image, error) {
+	var img backend.Image
+	_, err := s.db.QueryContext(
+		ctx,
+		"SELECT id, name, version, path, RegistryURL FROM images",
+		&img.ID, &img.Name, &img.Version, &img.Path, &img.RegistryURL,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &img, nil
 }
 
 func encodeAuth(username, password string) (string, error) {
