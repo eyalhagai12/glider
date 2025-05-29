@@ -31,7 +31,7 @@ func (d *LocalDeployer) Deploy(ctx context.Context, deployment *backend.Deployme
 		return nil, err
 	}
 
-	if err := d.imageService.PullImage(ctx, image); err != nil {
+	if _, err := d.imageService.PullImage(ctx, image); err != nil {
 		return nil, err
 	}
 
