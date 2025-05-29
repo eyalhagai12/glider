@@ -23,7 +23,7 @@ func NewDockerContainerService(cli *client.Client, db *sql.DB) *DockerContainerS
 
 func (s *DockerContainerService) Create(ctx context.Context, cont *backend.Container, image *backend.Image) (*backend.Container, error) {
 	createResp, err := s.cli.ContainerCreate(ctx, &container.Config{
-		Image: image.ToString(),
+		Image: image.ImageName(),
 	}, nil, nil, nil, cont.Name)
 	if err != nil {
 		return nil, err

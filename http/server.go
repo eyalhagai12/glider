@@ -2,11 +2,13 @@ package http
 
 import (
 	backend "glider"
+	"glider/docker"
 	"glider/pg"
 	"log"
 	"log/slog"
 	"os"
 
+	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,6 +26,7 @@ type Server struct {
 	userService       backend.UserService
 	imageService      backend.ImageService
 	deploymentService backend.DeploymentService
+	containerService  backend.ContainerService
 }
 
 func NewServer(host string, port string) *Server {
@@ -50,8 +53,18 @@ func NewServer(host string, port string) *Server {
 		log.Fatal("Failed to connect to the database: " + err.Error())
 	}
 
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		log.Fatal("failed to connect to client")
+	}
+
 	userService := pg.NewUserService(db)
+	containerService := docker.NewDockerContainerService(cli, db)
+	imageService := docker.NewDockerImageService(cli, db)
+
 	server.userService = userService
+	server.containerService = containerService
+	server.imageService = imageService
 
 	return server
 }
