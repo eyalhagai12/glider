@@ -41,7 +41,7 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 		return nil, errors.Join(err, errors.New("failed to create deployer"))
 	}
 
-	image, err := s.imageService.GetImageByID(c.Request.Context(), request.ImageID)
+	image, err := s.imageService.GetByID(c.Request.Context(), request.ImageID)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to get image"))
 	}
