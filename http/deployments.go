@@ -23,7 +23,6 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 		Name:           request.Name,
 		ProjectID:      request.ProjectID,
 		Environment:    request.Environment,
-		ImageID:        request.ImageID,
 		Tags:           tags,
 		DeployMetadata: request.DeployMetadata,
 		Status:         backend.DeploymentStatusPending,
@@ -31,22 +30,28 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 		Replicas:       request.Replicas,
 	}
 
+	if err := request.DeployMetadata.Validate(); err != nil {
+		return nil, errors.Join(err, errors.New("invalid deploy metadata"))
+	}
+
 	deployment, err := s.deploymentService.Create(c.Request.Context(), deployment)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to create deployment"))
 	}
 
-	deployer, err := docker.NewLocalDeployer()
+	deployer, err := docker.NewLocalDeployer(s.db)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to create deployer"))
 	}
 
-	image, err := s.imageService.GetByID(c.Request.Context(), request.ImageID)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("failed to get image"))
+	image := &backend.Image{
+		ID:          uuid.New(),
+		Name:        request.Name,
+		Version:     request.Version,
+		RegistryURL: "glider-registry:5000",
 	}
 
-	deployment, err = deployer.Deploy(c.Request.Context(), deployment, image)
+	deployment, err = deployer.Deploy(c.Request.Context(), deployment, image, request.DeployMetadata)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to deploy"))
 	}

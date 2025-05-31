@@ -11,7 +11,6 @@ type Image struct {
 	Name        string
 	Version     string
 	RegistryURL string
-	Path        string
 }
 
 func (i *Image) ImageName() string {
@@ -23,7 +22,7 @@ func (i *Image) ImagePath() string {
 }
 
 type ImageService interface {
-	BuildImage(ctx context.Context, image *Image) (*Image, error)
+	BuildImage(ctx context.Context, image *Image, path string) (*Image, error)
 	PullImage(ctx context.Context, image *Image) (*Image, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Image, error)
 }

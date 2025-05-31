@@ -2,31 +2,46 @@ package docker
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	backend "glider"
+	"glider/gitrepo"
 
 	"github.com/docker/docker/client"
 )
 
 type LocalDeployer struct {
-	cli              *client.Client
-	imageService     backend.ImageService
-	containerService backend.ContainerService
+	cli               *client.Client
+	imageService      backend.ImageService
+	containerService  backend.ContainerService
+	sourceCodeService backend.SourceCodeService
 }
 
-func NewLocalDeployer() (*LocalDeployer, error) {
+func NewLocalDeployer(db *sql.DB) (*LocalDeployer, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
 
+	imageService := NewDockerImageService(cli, db)
+	containerService := NewDockerContainerService(cli, db)
+	sourceCodeService := gitrepo.NewGitsSourceCodeService()
+
 	return &LocalDeployer{
-		cli: cli,
+		cli:               cli,
+		imageService:      imageService,
+		containerService:  containerService,
+		sourceCodeService: sourceCodeService,
 	}, nil
 }
 
-func (d *LocalDeployer) Deploy(ctx context.Context, deployment *backend.Deployment, image *backend.Image) (*backend.Deployment, error) {
-	image, err := d.imageService.BuildImage(ctx, image)
+func (d *LocalDeployer) Deploy(ctx context.Context, deployment *backend.Deployment, image *backend.Image, deploymentMetadata backend.DeploymentMetadata) (*backend.Deployment, error) {
+	path, err := d.sourceCodeService.Fetch(ctx, deploymentMetadata)
+	if err != nil {
+		return nil, err
+	}
+
+	image, err = d.imageService.BuildImage(ctx, image, path)
 	if err != nil {
 		return nil, err
 	}

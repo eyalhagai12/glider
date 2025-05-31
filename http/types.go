@@ -1,6 +1,10 @@
 package http
 
-import "github.com/google/uuid"
+import (
+	backend "glider"
+
+	"github.com/google/uuid"
+)
 
 type createUser struct {
 	Username       string `json:"username" binding:"required"`
@@ -14,13 +18,12 @@ type loginUser struct {
 }
 
 type deployRequest struct {
-	Name           string
-	Description    string
-	Version        string
-	Replicas       int
-	ProjectID      uuid.UUID
-	Environment    string
-	ImageID        uuid.UUID
-	Tags           []string
-	DeployMetadata map[string]any
+	Name           string                     `json:"name" binding:"required"`
+	Description    string                     `json:"description"`
+	Version        string                     `json:"version" binding:"required"`
+	Replicas       int                        `json:"replicas" binding:"required"`
+	ProjectID      uuid.UUID                  `json:"projectId" binding:"required"`
+	Environment    string                     `json:"environment" binding:"required"`
+	Tags           []string                   `json:"tags"`
+	DeployMetadata backend.DeploymentMetadata `json:"deployMetadata" binding:"required"`
 }

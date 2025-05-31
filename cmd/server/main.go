@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	godotenv.Load("../../.env")
 
 	server := http.NewServer("0.0.0.0", "8080")
 

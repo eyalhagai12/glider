@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,8 +15,18 @@ const (
 	DeploymentStatusReady     = "ready"
 )
 
+type DeploymentMetadata map[string]any
+
+func (dm DeploymentMetadata) Validate() error {
+	if _, ok := dm["type"]; !ok {
+		return errors.Join(ErrInvalidInput, errors.New("type is required"))
+	}
+
+	return nil
+}
+
 type Tag struct {
-	ID           uuid.UUID `json:"id"`
+	ID           int       `json:"id"`
 	DeploymentID uuid.UUID `json:"deployment_id"`
 	Name         string    `json:"name"`
 	IsSystem     bool      `json:"isSystem"`
@@ -35,12 +46,17 @@ type Deployment struct {
 	UpdatedAt time.Time  `json:"updatedAt"`
 	DeletedAt *time.Time `json:"deletedAt,omitempty"`
 
-	Tags           []Tag          `json:"tags,omitempty"`
-	DeployMetadata map[string]any `json:"deployMetadata,omitempty"`
+	Tags           []Tag              `json:"tags,omitempty"`
+	DeployMetadata DeploymentMetadata `json:"deployMetadata,omitempty"`
 }
 
 type DeploymentService interface {
 	Create(ctx context.Context, deployment *Deployment) (*Deployment, error)
+}
+
+type SourceCodeService interface {
+	// this function should load the source code into a directory and returng the path to it
+	Fetch(ctx context.Context, deploymentMetadata DeploymentMetadata) (string, error)
 }
 
 func TagsFromList(tags []string) []Tag {

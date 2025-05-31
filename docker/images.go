@@ -26,8 +26,8 @@ func NewDockerImageService(cli *client.Client, db *sql.DB) *DockerImageService {
 	}
 }
 
-func (s *DockerImageService) BuildImage(ctx context.Context, img *backend.Image) (*backend.Image, error) {
-	tar, err := archive.TarWithOptions(img.Path, &archive.TarOptions{})
+func (s *DockerImageService) BuildImage(ctx context.Context, img *backend.Image, path string) (*backend.Image, error) {
+	tar, err := archive.TarWithOptions(path, &archive.TarOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +55,9 @@ func (s *DockerImageService) BuildImage(ctx context.Context, img *backend.Image)
 	defer pullResp.Close()
 
 	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO images (id, name, path, version, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
-	`, img.ID, img.Name, img.Path, img.Version)
+		INSERT INTO images (id, name, version, created_at, updated_at)
+		VALUES ($1, $2, $3, NOW(), NOW())
+	`, img.ID, img.Name, img.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,8 @@ func (s *DockerImageService) GetByID(ctx context.Context, id uuid.UUID) (*backen
 	var img backend.Image
 	_, err := s.db.QueryContext(
 		ctx,
-		"SELECT id, name, version, path, RegistryURL FROM images",
-		&img.ID, &img.Name, &img.Version, &img.Path, &img.RegistryURL,
+		"SELECT id, name, version, RegistryURL FROM images",
+		&img.ID, &img.Name, &img.Version, &img.RegistryURL,
 	)
 	if err != nil {
 		return nil, err
