@@ -27,3 +27,20 @@ type deployRequest struct {
 	Tags           []string                   `json:"tags"`
 	DeployMetadata backend.DeploymentMetadata `json:"deployMetadata" binding:"required"`
 }
+
+type fetchDeployment struct {
+	ID uuid.UUID `json:"id" binding:"required"`
+}
+
+type DeploymentAction struct {
+	Name   string `json:"name" binding:"required"`
+	Method string `json:"method" binding:"required"`
+	Path   string `json:"path" binding:"required"`
+	Body   string `json:"body,omitempty"`
+}
+
+type DeploymentResponse struct {
+	Deployment *backend.Deployment `json:"deployment"`
+	Actions    []DeploymentAction  `json:"actions"`
+	URL        string              `json:"url"`
+}

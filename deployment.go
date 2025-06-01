@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,9 @@ const (
 	DeploymentStatusFailed    = "failed"
 	DeploymentStatusReady     = "ready"
 )
+
+const DeploymentURLFormat = "/deployments/%s"
+const ProxyURLFormat = "/proxy/%s"
 
 type DeploymentMetadata map[string]any
 
@@ -48,6 +52,14 @@ type Deployment struct {
 
 	Tags           []Tag              `json:"tags,omitempty"`
 	DeployMetadata DeploymentMetadata `json:"deployMetadata,omitempty"`
+}
+
+func (d *Deployment) URL() string {
+	return fmt.Sprintf(DeploymentURLFormat, d.ID)
+}
+
+func (d *Deployment) ProxyURL() string {
+	return fmt.Sprintf(ProxyURLFormat, d.ID)
 }
 
 type DeploymentService interface {

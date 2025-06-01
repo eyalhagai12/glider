@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/google/uuid"
 )
 
 type DockerContainerService struct {
@@ -53,4 +54,27 @@ func (s *DockerContainerService) Create(ctx context.Context, cont *backend.Conta
 	}
 
 	return cont, nil
+}
+
+func (s *DockerContainerService) GetContainersByDeploymentID(ctx context.Context, deploymentID uuid.UUID) ([]*backend.Container, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, platform_id, name, deployment_id, image_id, host, port
+		FROM containers
+		WHERE deployment_id = $1
+	`, deploymentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var containers []*backend.Container
+	for rows.Next() {
+		var cont backend.Container
+		if err := rows.Scan(&cont.ID, &cont.PlatformID, &cont.Name, &cont.DeploymentID, &cont.ImageID, &cont.Host, &cont.Port); err != nil {
+			return nil, err
+		}
+		containers = append(containers, &cont)
+	}
+
+	return containers, nil
 }

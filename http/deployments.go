@@ -16,7 +16,59 @@ import (
 
 func (s *Server) RegisterDeploymentsHandler() {
 	routeGroup := s.apiRoutes.Group("/deployments")
+	routeGroup.GET("/:id", handler.FromFunc(s.getDeployment, http.StatusOK))
 	routeGroup.POST("/", handler.FromFunc(s.createDeployment, http.StatusAccepted))
+}
+
+func (s *Server) getDeployment(c *gin.Context, _ any) (DeploymentResponse, error) {
+	deploymentUuid := uuid.MustParse(c.Param("id"))
+	deployment, err := s.deploymentService.GetByID(c.Request.Context(), deploymentUuid)
+	if err != nil {
+		return DeploymentResponse{}, err
+	}
+
+	if deployment.DeletedAt != nil {
+		return DeploymentResponse{}, backend.ErrNotFound
+	}
+
+	actions := []DeploymentAction{}
+	deploymentUrl := deployment.URL()
+
+	if deployment.Status == backend.DeploymentStatusFailed {
+		actions = append(actions, DeploymentAction{
+			Name:   "retry",
+			Method: "POST",
+			Path:   deploymentUrl + "/retry",
+		})
+	}
+
+	if deployment.Status == backend.DeploymentStatusPending {
+		actions = append(actions, DeploymentAction{
+			Name:   "cancel",
+			Method: "POST",
+			Path:   deploymentUrl + "/cancel",
+		}) // to actually implement this i need to store the context cancel function and call when needed, this is a todo
+	}
+
+	if deployment.Status != backend.DeploymentStatusPending {
+		actions = append(actions, DeploymentAction{
+			Name:   "delete",
+			Method: "DELETE",
+			Path:   deploymentUrl,
+		})
+
+		actions = append(actions, DeploymentAction{
+			Name:   "redeploy",
+			Method: "POST",
+			Path:   deploymentUrl + "/redeploy",
+		})
+	}
+
+	return DeploymentResponse{
+		Deployment: deployment,
+		Actions:    actions,
+		URL:        deployment.ProxyURL(),
+	}, nil
 }
 
 func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backend.Deployment, error) {
@@ -51,6 +103,7 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 func (s *Server) deployTask(ctx context.Context, deployment *backend.Deployment) func() error {
 	return func() error {
 		logger := s.logger.With("deployment_id", deployment.ID)
+
 		deployment, err := s.deploymentService.Create(ctx, deployment)
 		if err != nil {
 			return errors.Join(err, errors.New("failed to create deployment"))
@@ -91,11 +144,6 @@ func (s *Server) deployTask(ctx context.Context, deployment *backend.Deployment)
 		deployment, err = s.deploymentService.Update(ctx, deployment)
 		if err != nil {
 			return errors.Join(err, errors.New("failed to update deployment"))
-		}
-
-		deployment, err = s.deploymentService.GetByID(ctx, deployment.ID)
-		if err != nil {
-			return errors.Join(err, errors.New("failed to get deployment"))
 		}
 
 		return nil

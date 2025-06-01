@@ -19,4 +19,5 @@ type Container struct {
 
 type ContainerService interface {
 	Create(ctx context.Context, container *Container, image *Image) (*Container, error)
+	GetContainersByDeploymentID(ctx context.Context, deploymentID uuid.UUID) ([]*Container, error)
 }

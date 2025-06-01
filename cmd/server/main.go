@@ -17,6 +17,7 @@ func main() {
 
 	server.RegisterUserRoutes()
 	server.RegisterDeploymentsHandler()
+	server.RegisterProxyHandler()
 
 	if err := server.Start(); err != nil {
 		log.Fatal(err)
