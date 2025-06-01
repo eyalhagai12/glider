@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/alitto/pond/v2"
 	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
 )
@@ -19,8 +20,9 @@ type Server struct {
 	engine    *gin.Engine
 	apiRoutes *gin.RouterGroup
 
-	logger *slog.Logger
-	db     *sql.DB
+	logger     *slog.Logger
+	db         *sql.DB
+	workerpool pond.Pool
 
 	Port string
 	Host string
@@ -43,15 +45,18 @@ func NewServer(host string, port string) *Server {
 	})
 	logger := slog.New(logHandler)
 
+	workerpool := pond.NewPool(10, pond.WithQueueSize(1000), pond.WithNonBlocking(true))
+
 	server := &Server{
-		engine:    engine,
-		apiRoutes: engine.Group(apiRouteGroup),
-		Port:      port,
-		Host:      host,
-		logger:    logger,
+		engine:     engine,
+		apiRoutes:  engine.Group(apiRouteGroup),
+		Port:       port,
+		Host:       host,
+		logger:     logger,
+		workerpool: workerpool,
 	}
 
-	db, err := pg.NewDatabase()
+	db, err := pg.NewDatabase(logger)
 	if err != nil {
 		log.Fatal("Failed to connect to the database: " + err.Error())
 	}

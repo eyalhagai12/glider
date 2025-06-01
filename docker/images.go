@@ -6,7 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	backend "glider"
+	"io"
 	"log/slog"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
@@ -42,7 +44,7 @@ func (s *DockerImageService) BuildImage(ctx context.Context, img *backend.Image,
 	if err != nil {
 		return nil, err
 	}
-	// io.Copy(os.Stdout, buildResp.Body)
+	io.Copy(os.Stdout, buildResp.Body)
 	defer buildResp.Body.Close()
 
 	regAuth, err := encodeAuth("username", "password")
@@ -56,7 +58,7 @@ func (s *DockerImageService) BuildImage(ctx context.Context, img *backend.Image,
 	if err != nil {
 		return nil, err
 	}
-	// io.Copy(os.Stdout, pushResp)
+	io.Copy(os.Stdout, pushResp)
 	defer pushResp.Close()
 
 	_, err = s.db.ExecContext(ctx, `
@@ -85,7 +87,7 @@ func (s *DockerImageService) PullImage(ctx context.Context, img *backend.Image) 
 	if err != nil {
 		return nil, err
 	}
-	// io.Copy(os.Stdout, pullResp)
+	io.Copy(os.Stdout, pullResp)
 	defer pullResp.Close()
 
 	return img, nil
