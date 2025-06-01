@@ -53,8 +53,8 @@ func (s *DeploymentService) Create(ctx context.Context, dep *backend.Deployment)
 func (s *DeploymentService) Update(ctx context.Context, dep *backend.Deployment) (*backend.Deployment, error) {
 	_, err := s.db.ExecContext(
 		ctx,
-		"UPDATE deployments SET name = $1, version = $2, environment = $3, project_id = $4, status = $5, replicas = $6, updated_at = NOW() WHERE id = $7",
-		dep.Name, dep.Version, dep.Environment, dep.ProjectID, dep.Status, dep.Replicas, dep.ID,
+		"UPDATE deployments SET name = $1, version = $2, environment = $3, project_id = $4, status = $5, replicas = $6, image_id = $7, updated_at = NOW() WHERE id = $8",
+		dep.Name, dep.Version, dep.Environment, dep.ProjectID, dep.Status, dep.Replicas, dep.ImageID, dep.ID,
 	)
 	if err != nil {
 		return nil, err

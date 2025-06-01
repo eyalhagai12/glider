@@ -5,6 +5,7 @@ import (
 	backend "glider"
 	"glider/docker"
 	"glider/gitrepo"
+	"log/slog"
 	"net/http"
 
 	"github.com/eyalhagai12/hagio/handler"
@@ -18,6 +19,8 @@ func (s *Server) RegisterDeploymentsHandler() {
 }
 
 func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backend.Deployment, error) {
+	logger := s.logger.With("deployment_name", request.Name)
+
 	tags := backend.TagsFromList(request.Tags)
 	deployment := &backend.Deployment{
 		ID:             uuid.New(),
@@ -39,9 +42,19 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to create deployment"))
 	}
+	defer func(deployment *backend.Deployment) {
+		if err != nil {
+			logger.Debug("rolling back deployment", slog.String("error", err.Error()), slog.Any("deployment", deployment))
+			deployment.Status = backend.DeploymentStatusFailed
+			_, err := s.deploymentService.Update(c.Request.Context(), deployment)
+			if err != nil {
+				logger.Error("failed to update deployment", slog.String("error", err.Error()))
+			}
+		}
+	}(deployment)
 
 	sourceCodeService := gitrepo.NewGitSourceCodeService()
-	deployer, err := docker.NewLocalDeployer(s.db, s.logger, sourceCodeService)
+	deployer, err := docker.NewLocalDeployer(s.db, logger, sourceCodeService)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to create deployer"))
 	}
@@ -59,6 +72,8 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to deploy"))
 	}
+
+	deployment.Status = backend.DeploymentStatusReady
 
 	deployment, err = s.deploymentService.Update(c.Request.Context(), deployment)
 	if err != nil {
