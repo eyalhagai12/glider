@@ -37,27 +37,31 @@ services:
       - registry-data:/var/lib/registry
     restart: always
 
-  registry-ui:
-    image: joxit/docker-registry-ui:main
-    restart: always
-    ports:
-      - 81:80
-    environment:
-      - SINGLE_REGISTRY=true
-      - REGISTRY_TITLE=Docker Registry UI
-      - DELETE_IMAGES=true
-      - SHOW_CONTENT_DIGEST=true
-      - SHOW_CATALOG_NB_TAGS=true
-      - CATALOG_MIN_BRANCHES=1
-      - CATALOG_MAX_BRANCHES=1
-      - TAGLIST_PAGE_SIZE=100
-      - REGISTRY_SECURED=false
-      - CATALOG_ELEMENTS_LIMIT=1000
-    container_name: registry-ui
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.glider-registry-rtr.rule=PathPrefix(`/registry`)
-      - traefik.http.services.glider-registry-svc.loadbalancer.server.port=80
+  # registry-ui:
+  #   image: joxit/docker-registry-ui:main
+  #   restart: always
+  #   ports:
+  #     - 81:80
+  #   environment:
+  #     - SINGLE_REGISTRY=true
+  #     - REGISTRY_TITLE=Docker Registry UI
+  #     - DELETE_IMAGES=true
+  #     - SHOW_CONTENT_DIGEST=true
+  #     - SHOW_CATALOG_NB_TAGS=true
+  #     - CATALOG_MIN_BRANCHES=1
+  #     - CATALOG_MAX_BRANCHES=1
+  #     - TAGLIST_PAGE_SIZE=100
+  #     - REGISTRY_SECURED=false
+  #     - CATALOG_ELEMENTS_LIMIT=1000
+  #   container_name: registry-ui
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.http.routers.glider-registry-rtr.entrypoints=web
+  #     - traefik.http.routers.glider-registry-rtr.rule=Host(`localhost`) && PathPrefix(`/registry`)
+  #     - traefik.http.services.glider-registry-svc.loadbalancer.server.port=80
+  #     - traefik.http.middlewares.registry-stripprefix.stripprefix.prefixes=/registry
+  #     - traefik.http.routers.glider-registry-rtr.middlewares=registry-stripprefix
+
 
   pg-admin:
     image: dpage/pgadmin4:latest

@@ -8,7 +8,10 @@ import (
 )
 
 func main() {
-	godotenv.Load("../../.env")
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	server := http.NewServer("0.0.0.0", "8080")
 

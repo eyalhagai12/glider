@@ -29,6 +29,7 @@ type Server struct {
 	imageService      backend.ImageService
 	deploymentService backend.DeploymentService
 	containerService  backend.ContainerService
+	sourceCodeService backend.SourceCodeService
 }
 
 func NewServer(host string, port string) *Server {
@@ -56,14 +57,14 @@ func NewServer(host string, port string) *Server {
 	}
 	server.db = db
 
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.FromEnv)
 	if err != nil {
 		log.Fatal("failed to connect to client")
 	}
 
 	userService := pg.NewUserService(db)
 	containerService := docker.NewDockerContainerService(cli, db)
-	imageService := docker.NewDockerImageService(cli, db)
+	imageService := docker.NewDockerImageService(cli, db, logger)
 	deploymentService := pg.NewDeploymentService(db)
 
 	server.userService = userService

@@ -23,14 +23,14 @@ func NewDockerContainerService(cli *client.Client, db *sql.DB) *DockerContainerS
 
 func (s *DockerContainerService) Create(ctx context.Context, cont *backend.Container, image *backend.Image) (*backend.Container, error) {
 	createResp, err := s.cli.ContainerCreate(ctx, &container.Config{
-		Image: image.ImageName(),
+		Image: image.ImagePath(),
 	}, nil, nil, nil, cont.Name)
 	if err != nil {
 		return nil, err
 	}
 	cont.PlatformID = createResp.ID
 
-	err = s.cli.ContainerStart(ctx, cont.Name, container.StartOptions{})
+	err = s.cli.ContainerStart(ctx, cont.PlatformID, container.StartOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,8 @@ func (s *DockerContainerService) Create(ctx context.Context, cont *backend.Conta
 		return nil, err
 	}
 
-	cont.Port = resp.NetworkSettings.Ports["8080/tcp"][0].HostPort
+	// cont.Port = resp.NetworkSettings.Ports["8080/tcp"][0].HostPort
+	cont.Port = "8080"
 	cont.Host = resp.NetworkSettings.IPAddress
 
 	_, err = s.db.ExecContext(ctx, `

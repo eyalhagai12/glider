@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS images (
     id UUID PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     version VARCHAR(100) NOT NULL,
-    RegistryURL VARCHAR(100)
+    registry_url VARCHAR(100)
 )
 -- +goose StatementEnd
 

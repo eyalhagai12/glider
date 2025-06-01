@@ -7,11 +7,12 @@ CREATE TABLE IF NOT EXISTS deployments (
     environment VARCHAR(100) NOT NULL,
     project_id UUID NOT NULL,
     status VARCHAR(100) NOT NULL,
-    image_id UUID NOT NULL,
+    image_id UUID,
     replicas INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
+    deploy_metadata JSONB NOT NULL,
     FOREIGN KEY (project_id) REFERENCES projects (id),
     FOREIGN KEY (image_id) REFERENCES images (ID)
 );

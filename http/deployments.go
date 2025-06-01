@@ -4,6 +4,7 @@ import (
 	"errors"
 	backend "glider"
 	"glider/docker"
+	"glider/gitrepo"
 	"net/http"
 
 	"github.com/eyalhagai12/hagio/handler"
@@ -39,7 +40,8 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 		return nil, errors.Join(err, errors.New("failed to create deployment"))
 	}
 
-	deployer, err := docker.NewLocalDeployer(s.db)
+	sourceCodeService := gitrepo.NewGitSourceCodeService()
+	deployer, err := docker.NewLocalDeployer(s.db, s.logger, sourceCodeService)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to create deployer"))
 	}
@@ -48,12 +50,24 @@ func (s *Server) createDeployment(c *gin.Context, request deployRequest) (*backe
 		ID:          uuid.New(),
 		Name:        request.Name,
 		Version:     request.Version,
-		RegistryURL: "glider-registry:5000",
+		RegistryURL: "localhost:5000",
 	}
+
+	deployment.ImageID = image.ID
 
 	deployment, err = deployer.Deploy(c.Request.Context(), deployment, image, request.DeployMetadata)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("failed to deploy"))
+	}
+
+	deployment, err = s.deploymentService.Update(c.Request.Context(), deployment)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("failed to update deployment"))
+	}
+
+	deployment, err = s.deploymentService.GetByID(c.Request.Context(), deployment.ID)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("failed to get deployment"))
 	}
 
 	return deployment, nil

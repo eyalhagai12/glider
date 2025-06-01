@@ -52,6 +52,8 @@ type Deployment struct {
 
 type DeploymentService interface {
 	Create(ctx context.Context, deployment *Deployment) (*Deployment, error)
+	Update(ctx context.Context, deployment *Deployment) (*Deployment, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*Deployment, error)
 }
 
 type SourceCodeService interface {

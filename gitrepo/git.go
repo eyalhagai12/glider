@@ -13,12 +13,12 @@ import (
 const (
 	RepoUrlKey  = "repoUrl"
 	RepoNameKey = "repoName"
-	TempDirPath = "/tmp/repos"
+	TempDirPath = "./tmp/repos"
 )
 
 type GitSourceCodeService struct{}
 
-func NewGitsSourceCodeService() *GitSourceCodeService {
+func NewGitSourceCodeService() *GitSourceCodeService {
 	return &GitSourceCodeService{}
 }
 
