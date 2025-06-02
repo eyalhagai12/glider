@@ -68,7 +68,7 @@ func NewServer(host string, port string) *Server {
 	}
 
 	userService := pg.NewUserService(db)
-	containerService := docker.NewDockerContainerService(cli, db)
+	containerService := docker.NewDockerContainerService(cli, db, logger)
 	imageService := docker.NewDockerImageService(cli, db, logger)
 	deploymentService := pg.NewDeploymentService(db)
 

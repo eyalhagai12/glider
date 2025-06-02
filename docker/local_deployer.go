@@ -28,7 +28,7 @@ func NewLocalDeployer(db *sql.DB, logger *slog.Logger, sourceCodeService backend
 	}
 
 	imageService := NewDockerImageService(cli, db, logger)
-	containerService := NewDockerContainerService(cli, db)
+	containerService := NewDockerContainerService(cli, db, logger)
 
 	return &LocalDeployer{
 		cli:               cli,
