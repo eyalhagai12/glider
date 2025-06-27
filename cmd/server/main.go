@@ -18,6 +18,7 @@ func main() {
 	server.RegisterUserRoutes()
 	server.RegisterDeploymentsHandler()
 	server.RegisterProxyHandler()
+	server.RegisterProjectsHandler()
 
 	if err := server.Start(); err != nil {
 		log.Fatal(err)

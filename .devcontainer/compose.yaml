@@ -13,6 +13,8 @@ services:
       - traefik.http.services.dev-svc.loadbalancer.server.port=8080
       - traefik.http.routers.dev-rtr.middlewares=dev-stripprefix
       - traefik.http.middlewares.dev-stripprefix.stripprefix.prefixes=/dev
+    networks:
+      - glider-net
 
   db:
     image: postgres:latest
@@ -27,6 +29,8 @@ services:
       POSTGRES_USER: glider
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "glider"]
+    networks:
+      - glider-net
 
   registry:
     image: registry:latest
@@ -36,32 +40,8 @@ services:
     volumes:
       - registry-data:/var/lib/registry
     restart: always
-
-  # registry-ui:
-  #   image: joxit/docker-registry-ui:main
-  #   restart: always
-  #   ports:
-  #     - 81:80
-  #   environment:
-  #     - SINGLE_REGISTRY=true
-  #     - REGISTRY_TITLE=Docker Registry UI
-  #     - DELETE_IMAGES=true
-  #     - SHOW_CONTENT_DIGEST=true
-  #     - SHOW_CATALOG_NB_TAGS=true
-  #     - CATALOG_MIN_BRANCHES=1
-  #     - CATALOG_MAX_BRANCHES=1
-  #     - TAGLIST_PAGE_SIZE=100
-  #     - REGISTRY_SECURED=false
-  #     - CATALOG_ELEMENTS_LIMIT=1000
-  #   container_name: registry-ui
-  #   labels:
-  #     - traefik.enable=true
-  #     - traefik.http.routers.glider-registry-rtr.entrypoints=web
-  #     - traefik.http.routers.glider-registry-rtr.rule=Host(`localhost`) && PathPrefix(`/registry`)
-  #     - traefik.http.services.glider-registry-svc.loadbalancer.server.port=80
-  #     - traefik.http.middlewares.registry-stripprefix.stripprefix.prefixes=/registry
-  #     - traefik.http.routers.glider-registry-rtr.middlewares=registry-stripprefix
-
+    networks:
+      - glider-net
 
   pg-admin:
     image: dpage/pgadmin4:latest
@@ -80,37 +60,8 @@ services:
       - traefik.enable=true
       - traefik.http.routers.pg-admin-rtr.rule=PathPrefix(`/pgadmin`)
       - traefik.http.services.pg-admin-svc.loadbalancer.server.port=80
-
-  headscale:
-    image: headscale/headscale:latest
-    pull_policy: always
-    container_name: headscale
-    restart: unless-stopped
-    command: serve
-    volumes:
-      - ./headscale/config:/etc/headscale
-      - ./headscale/data:/var/lib/headscale
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.headscale-rtr.rule=PathPrefix(`/headscale`)
-      - traefik.http.routers.headscale-rtr.middlewares=headscale-stripprefix
-      - traefik.http.middlewares.headscale-stripprefix.stripprefix.prefixes=/headscale
-      - traefik.http.services.headscale-svc.loadbalancer.server.port=8080
-
-  headscale-ui:
-    image: ghcr.io/gurucomputing/headscale-ui:latest
-    pull_policy: always
-    container_name: headscale-ui
-    restart: unless-stopped
-    environment:
-      - HEADSCALE_URL=/headscale
-      - HEADSCALE_ADMIN_TOKEN=Bearer bvgEP5_.A4ORYr065SgfPrf1oakESJgsURs5PgON
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.headscale-ui-rtr.rule=PathPrefix(`/web`)
-      - traefik.http.routers.headscale-ui-rtr.middlewares=ui-stripprefix
-      - traefik.http.middlewares.ui-stripprefix.stripprefix.prefixes=/headscale-ui
-      - traefik.http.services.headscale-ui-svc.loadbalancer.server.port=8080
+    networks:
+      - glider-net
 
   traefik:
     image: traefik:latest
@@ -131,9 +82,13 @@ services:
       - --entrypoints.websecure.address=:443
       - --entrypoints.traefik.address=:8080
       - --global.sendAnonymousUsage=false
+    networks:
+      - glider-net
 
 volumes:
   postgres-data:
   registry-data:
   pgadmin-data:
-  headscale-data:
+
+networks:
+  glider-net:

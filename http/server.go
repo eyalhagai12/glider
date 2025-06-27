@@ -5,6 +5,7 @@ import (
 	backend "glider"
 	"glider/docker"
 	"glider/pg"
+	"glider/wireguard"
 	"log"
 	"log/slog"
 	"os"
@@ -32,6 +33,8 @@ type Server struct {
 	deploymentService backend.DeploymentService
 	containerService  backend.ContainerService
 	sourceCodeService backend.SourceCodeService
+	projectService    backend.ProjectService
+	networkService    backend.NetworkService
 }
 
 func NewServer(host string, port string) *Server {
@@ -71,11 +74,15 @@ func NewServer(host string, port string) *Server {
 	containerService := docker.NewDockerContainerService(cli, db, logger)
 	imageService := docker.NewDockerImageService(cli, db, logger)
 	deploymentService := pg.NewDeploymentService(db)
+	projectService := pg.NewProjectService(db)
+	networkService := wireguard.NewWireGuardService(db, logger)
 
 	server.userService = userService
 	server.containerService = containerService
 	server.imageService = imageService
 	server.deploymentService = deploymentService
+	server.projectService = projectService
+	server.networkService = networkService
 
 	return server
 }

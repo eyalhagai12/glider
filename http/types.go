@@ -44,3 +44,7 @@ type DeploymentResponse struct {
 	Actions    []DeploymentAction  `json:"actions"`
 	URL        string              `json:"url"`
 }
+
+type createProject struct {
+	Name string `json:"name" binding:"required"`
+}
