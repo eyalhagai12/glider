@@ -39,29 +39,37 @@ func (wgs *WireGuardService) Create(ctx context.Context, network *backend.Networ
 		return nil, err
 	}
 
-	err = exec.Command("wg-quick", "up", network.Name).Run()
+	out, err := exec.Command("wg-quick", "up", network.Name).CombinedOutput()
 	if err != nil {
-		wgs.logger.Error("Failed to create WireGuard network", "error", err)
+		wgs.logger.Error("Failed to create WireGuard network", "error", err, "output", string(out))
 		return nil, err
 	}
+
+	wgs.logger.Info("WireGuard network created successfully", "output", string(out))
 
 	wgs.logger.Info("WireGuard network created successfully", "network", network)
 	return network, nil
 }
 
-func createWireguradConfig(network *backend.Network) (string, error) {
-	key, err := wgtypes.GeneratePrivateKey()
+func (wgs *WireGuardService) GenerateKeys() (string, string, error) {
+	privateKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
-		fmt.Println("Failed to generate private key:", err)
-		return "", err
+		wgs.logger.Error("Failed to generate WireGuard private key", "error", err)
+		return "", "", err
 	}
 
+	publicKey := privateKey.PublicKey()
+	wgs.logger.Info("Generated WireGuard keys", "privateKey", privateKey.String(), "publicKey", publicKey.String())
+	return privateKey.String(), publicKey.String(), nil
+}
+
+func createWireguradConfig(network *backend.Network) (string, error) {
 	return fmt.Sprintf(`
-		[Interface]
-		Address = 192.168.1.1/24
-		ListenPort = 51821
-		PrivateKey = %s
-	`, key.String()), nil
+	[Interface]
+	Address = %s/24
+	ListenPort = %d
+	PrivateKey = %s
+	`, network.Address, network.ListenPort, network.PrivateKey), nil
 }
 
 func storeConfigInFile(config string, network *backend.Network) error {

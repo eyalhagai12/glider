@@ -27,11 +27,14 @@ func (s *Server) CreateProject(c *gin.Context, request createProject) (*backend.
 		return nil, err
 	}
 
-	projectNetwork, err := s.networkService.Create(c.Request.Context(), &backend.Network{
-		ID:        uuid.New(),
-		Name:      project.Name,
-		ProjectID: project.ID,
-	})
+	privateKey, _, err := s.networkService.GenerateKeys()
+	if err != nil {
+		logger.Error("failed to generate keys", "error", err)
+		return nil, err
+	}
+
+	network := backend.NewNetwork(project.Name, project.ID, 0, "132.145.0.1", 51836, privateKey)
+	projectNetwork, err := s.networkService.Create(c.Request.Context(), network)
 	if err != nil {
 		return nil, err
 	}
