@@ -1,7 +1,10 @@
 package http
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	backend "glider"
+	"net"
 	"net/http"
 
 	"github.com/eyalhagai12/hagio/handler"
@@ -33,7 +36,12 @@ func (s *Server) CreateProject(c *gin.Context, request createProject) (*backend.
 		return nil, err
 	}
 
-	network := backend.NewNetwork(project.Name, project.ID, 0, "132.145.0.1", 51836, privateKey)
+	port, err := getFreePort()
+	if err != nil {
+		logger.Error("failed to get free port", "error", err)
+		return nil, err
+	}
+	network := backend.NewNetwork(project.Name, project.ID, 0, generateRandomIPv4(), port, privateKey)
 	projectNetwork, err := s.networkService.Create(c.Request.Context(), network)
 	if err != nil {
 		return nil, err
@@ -41,4 +49,22 @@ func (s *Server) CreateProject(c *gin.Context, request createProject) (*backend.
 	logger.Debug("created network", "network_id", projectNetwork.ID)
 
 	return createdProject, nil
+}
+
+func generateRandomIPv4() backend.IPAddress {
+	bytes := make([]byte, 4)
+	rand.Read(bytes[:3])
+	bytes[3] = 1
+	return backend.IPAddress(binary.BigEndian.Uint32(bytes))
+}
+
+func getFreePort() (uint16, error) {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	defer listener.Close()
+
+	addr := listener.Addr().(*net.TCPAddr)
+	return uint16(addr.Port), nil
 }
